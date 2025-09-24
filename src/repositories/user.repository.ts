@@ -18,3 +18,15 @@ export const create = async (email: string, passwordHash: string) => {
 
   return result.rows[0];
 };
+
+/**
+ * Busca un usuario por su dirección de email.
+ * @param email El email del usuario a buscar.
+ * @returns El usuario si se encuentra, de lo contrario null.
+ */
+export const findByEmail = async (email: string) => {
+  const query = 'SELECT * FROM usuarios WHERE email = $1';
+  const result = await pool.query(query, [email]);
+
+  return result.rows[0] || null;
+};

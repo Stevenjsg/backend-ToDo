@@ -25,3 +25,17 @@ export const registerUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error en el servidor' });
   }
 };
+
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const result = await authService.login(email, password);
+    res.status(200).json(result);
+  } catch (error: any) {
+    // Si el servicio lanza nuestro error personalizado, enviamos un 401
+    if (error.message === 'AUTH_INVALID_CREDENTIALS') {
+      return res.status(401).json({ message: 'Email o contraseña incorrectos.' });
+    }
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
