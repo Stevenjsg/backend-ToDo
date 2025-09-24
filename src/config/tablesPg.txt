@@ -1,0 +1,35 @@
+CREATE DATABASE tododb;
+-- Primero, creamos un tipo personalizado para la prioridad.
+-- Esto asegura que solo se puedan insertar los valores 'baja', 'media', o 'alta'.
+CREATE TYPE prioridad_enum AS ENUM ('baja', 'media', 'alta');
+
+
+-- Creación de la tabla de usuarios
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- Creación de la tabla de tareas
+CREATE TABLE tareas (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL,
+    descripcion TEXT NOT NULL,
+    completada BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_modificacion TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    prioridad prioridad_enum NOT NULL DEFAULT 'media',
+    etiquetas TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+
+    -- Definimos la relación con la tabla de usuarios
+    CONSTRAINT fk_usuario
+        FOREIGN KEY(usuario_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE
+);
+
+-- Opcional: Crear un índice en usuario_id para acelerar las búsquedas de tareas por usuario.
+CREATE INDEX idx_tareas_usuario_id ON tareas(usuario_id);
