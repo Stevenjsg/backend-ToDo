@@ -1,11 +1,16 @@
 import express, { Request, Response } from 'express';
 import 'dotenv/config';
+import cors from 'cors';
 import authRouter from './api/auth/auth.routes'; 
 import tareasRouter from './api/tasks/tareas.routes';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(cors());
+// app.use(cors({
+//   origin: 'https://mi-app-vue.com'
+// }));
 app.use(express.json());
 
 
