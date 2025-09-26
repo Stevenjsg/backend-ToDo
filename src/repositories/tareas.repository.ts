@@ -19,17 +19,20 @@ export const findByUserId = async (userId: number): Promise<Tarea[]> => {
 
 /**
  * Inserta una nueva tarea en la base de datos para un usuario específico.
- * @param descripcion El texto de la tarea.
+ * @param data Un objeto que contiene los datos de la nueva tarea.
  * @param userId El ID del usuario propietario de la tarea.
  * @returns La nueva tarea creada.
  */
-export const create = async (descripcion: string, userId: number): Promise<Tarea> => {
+export const create = async (data: { descripcion: string; prioridad: string; etiquetas: string[] }, userId: number): Promise<Tarea> => {
+  const { descripcion, prioridad, etiquetas } = data;
+  
   const query = `
-    INSERT INTO tareas (descripcion, usuario_id)
-    VALUES ($1, $2)
+    INSERT INTO tareas (descripcion, usuario_id, prioridad, etiquetas)
+    VALUES ($1, $2, $3, $4)
     RETURNING *;
   `;
-  const result = await pool.query(query, [descripcion, userId]);
+
+  const result = await pool.query(query, [descripcion, userId, prioridad, etiquetas]);
   return result.rows[0];
 };
 

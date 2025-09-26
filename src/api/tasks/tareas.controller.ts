@@ -19,16 +19,20 @@ export const getTareas = async (req: Request, res: Response) => {
 
 export const createTarea = async (req: Request, res: Response) => {
   try {
-    const { descripcion } = req.body;
+     const { descripcion, prioridad, etiquetas = [] } = req.body; 
     const userId = req.user!.id;
 
-    // Validación simple
     if (!descripcion) {
       return res.status(400).json({ message: 'La descripción es requerida.' });
     }
 
-    const nuevaTarea = await tareasService.createTarea(descripcion, userId);
-    res.status(201).json(nuevaTarea); // 201 Created es el código correcto para una creación exitosa
+    // Pasamos el objeto de datos completo al servicio
+    const nuevaTarea = await tareasService.createTarea(
+      { descripcion, prioridad, etiquetas },
+      userId
+    );
+
+    res.status(201).json(nuevaTarea);
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor' });
   }

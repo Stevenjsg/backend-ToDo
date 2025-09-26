@@ -16,8 +16,8 @@ export const getTareasByUserId = (userId: number) => {
  * @param userId El ID del usuario.
  * @returns La nueva tarea creada.
  */
-export const createTarea = (descripcion: string, userId: number) => {
-  return tareasRepository.create(descripcion, userId);
+export const createTarea = (data: { descripcion: string; prioridad: string; etiquetas: string[] }, userId: number) => {
+  return tareasRepository.create(data, userId);
 };
 
 /**
