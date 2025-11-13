@@ -19,13 +19,13 @@ const port = process.env.PORT || 3000;
 // --- Socket.IO Setup ---
 const io = new Server(server, { // 👈 Initialize Socket.IO with the HTTP server
   cors: {
-    origin: "http://localhost:5173", // 👈 Your frontend URL (adjust if different)
+    origin: process.env.FRONTEND_URL, // 👈 Your frontend URL (adjust if different)
     methods: ["GET", "POST"]
   }
 });
 // --- Middleware ---
 // Configure CORS for Express (allow frontend origin)
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: process.env.FRONTEND_URL }));
 app.use(express.json());
 // --- API Routes ---
 app.use('/api/auth', authRouter);
