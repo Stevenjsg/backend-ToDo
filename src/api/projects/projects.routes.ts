@@ -13,14 +13,14 @@ const validateProjectData = [
     body('descripcion').optional({ nullable: true }).isString(),
 ];
 const validateProjectId = [
-    param('id').isInt().withMessage('El ID del proyecto debe ser un número entero'),
+    param('uuid').isUUID().withMessage('El ID del proyecto debe ser un UUID válido'),
 ];
 
 router.post('/', validateProjectData, handleValidationErrors, createProject);
 router.get('/', getProjects);
-router.get('/:id', validateProjectId, handleValidationErrors, getProject);
-router.put('/:id', validateProjectId, validateProjectData, handleValidationErrors, updateProject);
-router.delete('/:id', validateProjectId, handleValidationErrors, deleteProject);
-router.use('/:projectId/members', membersRouter);
+router.get('/:uuid', validateProjectId, handleValidationErrors, getProject);
+router.put('/:uuid', validateProjectId, validateProjectData, handleValidationErrors, updateProject);
+router.delete('/:uuid', validateProjectId, handleValidationErrors, deleteProject);
+router.use('/:projectUuid/members', membersRouter);
 
 export default router;

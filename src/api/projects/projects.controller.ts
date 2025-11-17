@@ -24,9 +24,11 @@ export const getProjects = async (req: Request, res: Response) => {
 
 export const getProject = async (req: Request, res: Response) => {
     try {
-        const projectId = parseInt(req.params.id);
+        // 1. Lee 'uuid' (string) en lugar de 'id' (number)
+        const projectUuid = req.params.uuid; 
         const userId = req.user!.id;
-        const project = await projectService.getProjectById(projectId, userId);
+        // 2. Llama a la nueva función del servicio
+        const project = await projectService.getProjectByUuid(projectUuid, userId); 
         res.status(200).json(project);
     } catch (error: any) {
         if (error.message === 'PROJECT_NOT_FOUND_OR_FORBIDDEN') {
@@ -35,17 +37,18 @@ export const getProject = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Error fetching project' });
     }
 };
-
 export const updateProject = async (req: Request, res: Response) => {
     try {
-        const projectId = parseInt(req.params.id);
+        // 1. Lee 'uuid'
+        const projectUuid = req.params.uuid; 
         const userId = req.user!.id;
         const { nombre, descripcion } = req.body;
-        const updatedProject = await projectService.updateProject(projectId, nombre, descripcion, userId);
+        // 2. Llama a la nueva función del servicio
+        const updatedProject = await projectService.updateProject(projectUuid, nombre, descripcion, userId); 
         res.status(200).json(updatedProject);
     } catch (error: any) {
          if (error.message === 'PROJECT_NOT_FOUND_OR_FORBIDDEN') {
-            return res.status(403).json({ message: 'Permission denied or project not found.' }); // 403 Forbidden might be better here
+            return res.status(403).json({ message: 'Permission denied or project not found.' });
         }
          if (error.message === 'Project name is required.') {
              return res.status(400).json({ message: error.message });
@@ -56,13 +59,15 @@ export const updateProject = async (req: Request, res: Response) => {
 
 export const deleteProject = async (req: Request, res: Response) => {
     try {
-        const projectId = parseInt(req.params.id);
+        // 1. Lee 'uuid'
+        const projectUuid = req.params.uuid; 
         const userId = req.user!.id;
-        await projectService.deleteProject(projectId, userId);
+        // 2. Llama a la nueva función del servicio
+        await projectService.deleteProject(projectUuid, userId); 
         res.status(204).send();
     } catch (error: any) {
         if (error.message === 'PROJECT_NOT_FOUND_OR_FORBIDDEN') {
-            return res.status(403).json({ message: 'Permission denied or project not found.' }); // 403 Forbidden
+            return res.status(403).json({ message: 'Permission denied or project not found.' });
         }
         res.status(500).json({ message: 'Error deleting project' });
     }

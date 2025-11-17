@@ -40,32 +40,32 @@ export const findByUserId = async (userId: number): Promise<Project[]> => {
 };
 
 // Find a specific project by ID (and check ownership/membership)
-export const findByIdAndUserId = async (projectId: number, userId: number): Promise<Project | null> => {
+export const findByUuidAndUserId = async (uuid: string, userId: number): Promise<Project | null> => {
     const query = `
       SELECT p.* FROM proyectos p
       JOIN miembros_proyecto mp ON p.id = mp.proyecto_id
-      WHERE p.id = $1 AND mp.usuario_id = $2;
-    `;
-    const result = await pool.query(query, [projectId, userId]);
+      WHERE p.uuid = $1 AND mp.usuario_id = $2; 
+    `; // 1. Busca por p.uuid
+    const result = await pool.query(query, [uuid, userId]); // 2. Pasa el uuid
     return result.rows[0] || null;
 };
 
 // Update a project (only allow owner to update for now)
-export const update = async (id: number, name: string, description: string | null, ownerId: number): Promise<Project | null> => {
+export const update = async (uuid: string, name: string, description: string | null, ownerId: number): Promise<Project | null> => {
     const query = `
         UPDATE proyectos
         SET nombre = $1, descripcion = $2, fecha_actualizacion = NOW()
-        WHERE id = $3 AND owner_id = $4
+        WHERE uuid = $3 AND owner_id = $4 -- 1. Actualiza usando uuid
         RETURNING *;
     `;
-    const result = await pool.query(query, [name, description, id, ownerId]);
+    const result = await pool.query(query, [name, description, uuid, ownerId]); // 2. Pasa uuid
     return result.rows[0] || null;
 };
 
 // Delete a project (only allow owner to delete)
-export const remove = async (id: number, ownerId: number): Promise<number> => {
+export const remove = async (uuid: string, ownerId: number): Promise<number> => {
     // ON DELETE CASCADE in the DB handles deleting members and items
-    const query = `DELETE FROM proyectos WHERE id = $1 AND owner_id = $2`;
-    const result = await pool.query(query, [id, ownerId]);
+    const query = `DELETE FROM proyectos WHERE uuid = $1 AND owner_id = $2`; // 1. Borra usando uuid
+    const result = await pool.query(query, [uuid, ownerId]); // 2. Pasa uuid
     return result.rowCount ?? 0;
 };

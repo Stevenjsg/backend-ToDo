@@ -9,21 +9,24 @@ export const getProjectsForUser = (userId: number) => {
     return projectRepository.findByUserId(userId);
 };
 
-export const getProjectById = async (projectId: number, userId: number) => {
-    const project = await projectRepository.findByIdAndUserId(projectId, userId);
+export const getProjectByUuid = async (uuid: string, userId: number) => {
+    // 1. Llama a la nueva función del repositorio
+    const project = await projectRepository.findByUuidAndUserId(uuid, userId); 
     if (!project) throw new Error('PROJECT_NOT_FOUND_OR_FORBIDDEN');
     return project;
 };
 
-export const updateProject = async (id: number, name: string, description: string | null, userId: number) => {
+export const updateProject = async (uuid: string, name: string, description: string | null, userId: number) => {
     if (!name) throw new Error('Project name is required.');
-    const updatedProject = await projectRepository.update(id, name, description, userId);
+    // 1. Llama a update con uuid
+    const updatedProject = await projectRepository.update(uuid, name, description, userId); 
     if (!updatedProject) throw new Error('PROJECT_NOT_FOUND_OR_FORBIDDEN');
     return updatedProject;
 };
 
-export const deleteProject = async (id: number, userId: number) => {
-    const deletedRows = await projectRepository.remove(id, userId);
+export const deleteProject = async (uuid: string, userId: number) => {
+    // 1. Llama a remove con uuid
+    const deletedRows = await projectRepository.remove(uuid, userId); 
     if (deletedRows === 0) throw new Error('PROJECT_NOT_FOUND_OR_FORBIDDEN');
     return deletedRows;
 };
