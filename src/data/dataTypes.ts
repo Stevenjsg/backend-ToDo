@@ -1,7 +1,7 @@
 // Define ENUM types mirroring the database
-export type ItemType = 'task' | 'note' | 'reminder';
-export type ItemPriority = 'baja' | 'media' | 'alta';
-export type ProjectRole = 'owner' | 'editor' | 'viewer';
+export type ItemType = "task" | "note" | "reminder";
+export type ItemPriority = "baja" | "media" | "alta";
+export type ProjectRole = "owner" | "editor" | "viewer";
 // Add Subscription types later if needed
 
 // Interface for Items (Tasks, Notes, Reminders)
@@ -40,7 +40,10 @@ export interface UserPayload {
 
 // Add Project and ProjectMember interfaces later when building collaboration
 // ... other types ...
-export type tipo_sesion_pomodoro_enum = 'trabajo' | 'descanso_corto' | 'descanso_largo';
+export type tipo_sesion_pomodoro_enum =
+  | "trabajo"
+  | "descanso_corto"
+  | "descanso_largo";
 
 export interface PomodoroSession {
   id: number;

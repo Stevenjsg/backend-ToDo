@@ -1,5 +1,6 @@
 import * as membersRepository from '../repositories/members.repository';
 import * as userRepository from '../repositories/user.repository'; // Need this to find users by email
+import * as projectRepository from '../repositories/project.repository';
 import { ProjectRole } from '../data/dataTypes';
 
 // Helper function for permission checks
@@ -10,7 +11,12 @@ const checkPermission = async (requesterId: number, projectId: number, allowedRo
     }
     return requesterRole; // Return role if needed
 };
-
+export const checkRolPermission = async (userId: number, projectId: number, allowedRoles: ProjectRole[]) => {
+  const role = await membersRepository.findUserRole(userId, projectId);
+  if (!role || !allowedRoles.includes(role)) {
+    throw new Error('PERMISSION_DENIED'); // El controlador capturará esto y devolverá 403
+  }
+};
 export const addMember = async (projectId: number, emailToAdd: string, role: ProjectRole, requesterId: number) => {
     await checkPermission(requesterId, projectId, ['owner', 'editor']); // Only owner/editor can add members
 
@@ -71,3 +77,27 @@ export const removeMember = async (projectId: number, userIdToRemove: number, re
     }
     return deletedRows;
 };
+
+export const addMemberByEmail = async (projectUuid: string, email: string, role: ProjectRole, requesterId: number) => {
+    // 1. Obtener ID del proyecto
+    const projectId = await projectRepository.findIdByUuid(projectUuid);
+    if (!projectId) throw new Error('PROJECT_NOT_FOUND');
+
+    // 2. Verificar permisos (El requester debe ser owner/editor del proyecto)
+    const requesterRole = await membersRepository.findUserRole(requesterId, projectId);
+    if (requesterRole !== 'owner' && requesterRole !== 'editor') {
+        throw new Error('PERMISSION_DENIED');
+    }
+
+    // 3. Buscar al usuario a invitar
+    const userToAdd = await userRepository.findByEmail(email);
+    if (!userToAdd) throw new Error('USER_NOT_FOUND');
+
+    if (userToAdd.id === requesterId) throw new Error('CANNOT_ADD_SELF');
+
+    // 4. Añadir al proyecto
+    // (La función 'add' del repositorio ya debería manejar si ya existe)
+    return membersRepository.add(userToAdd.id, projectId, role);
+};
+
+

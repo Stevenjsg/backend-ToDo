@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as membersService from '../../services/members.service';
 import { ProjectRole } from '../../data/dataTypes';
+import { io } from '../../index';
+import * as projectService from '../../services/project.service';
 
 export const addMember = async (req: Request, res: Response) => {
     try {
@@ -65,4 +67,32 @@ export const removeMember = async (req: Request, res: Response) => {
         if (error.message === 'MEMBER_NOT_FOUND') return res.status(404).json({ message: 'Member not found in this project.' });
         res.status(500).json({ message: 'Error removing member.' });
     }
+};
+export const inviteMember = async (req: Request, res: Response) => {
+  try {
+    // Recuerda: en routes.ts definimos router.use('/:projectUuid/members', ...)
+    // así que tenemos acceso a req.params.projectUuid
+    const { projectUuid } = req.params; 
+    const { email, role } = req.body;
+    const requesterId = req.user!.id;
+
+    const newMember = await membersService.addMemberByEmail(projectUuid, email, role || 'viewer', requesterId);
+    if (!newMember) {
+        return res.status(500).json({ message: 'Error al añadir el miembro.' });
+    }
+    const projectData = await projectService.getProjectById(newMember.proyecto_id, newMember.usuario_id);
+
+    const userRoom = `user_${newMember.usuario_id}`;
+    console.log(`📢 Notifying user in room ${userRoom} about new project`);
+    
+    io.to(userRoom).emit('project_received', projectData);
+
+
+    res.status(201).json(newMember);
+  } catch (error: any) {
+    if (error.message === 'USER_NOT_FOUND') return res.status(404).json({ message: 'Usuario no encontrado.' });
+    if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'No tienes permiso para invitar.' });
+    // ... otros errores
+    res.status(500).json({ message: 'Error al invitar miembro.' });
+  }
 };
