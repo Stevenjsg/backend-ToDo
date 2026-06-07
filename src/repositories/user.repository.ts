@@ -38,9 +38,19 @@ export const findByEmail = async (email: string) => {
  * @returns El usuario sin la contraseña, o null si no se encuentra.
  */
 export const findById = async (id: number) => {
-  const query = 'SELECT id, email, nombre_completo, avatar_url, bio, fecha_creacion FROM usuarios WHERE id = $1';
+  const query = 'SELECT id, uuid, email, nombre_completo, avatar_url, bio, fecha_creacion FROM usuarios WHERE id = $1';
   const result = await pool.query(query, [id]);
   return result.rows[0] || null;
+};
+
+/**
+ * Resuelve el ID numérico interno de un usuario a partir de su UUID público.
+ * @param uuid El UUID del usuario.
+ * @returns El ID numérico, o null si no existe.
+ */
+export const findIdByUuid = async (uuid: string): Promise<number | null> => {
+  const result = await pool.query('SELECT id FROM usuarios WHERE uuid = $1', [uuid]);
+  return result.rows[0]?.id || null;
 };
 
 /**
@@ -56,7 +66,7 @@ export const update = async (id: number, data: { nombre_completo?: string; bio?:
     UPDATE usuarios
     SET nombre_completo = $1, bio = $2
     WHERE id = $3
-    RETURNING id, email, nombre_completo, avatar_url, bio, fecha_creacion;
+    RETURNING id, uuid, email, nombre_completo, avatar_url, bio, fecha_creacion;
   `;
   const result = await pool.query(query, [nombre_completo, bio, id]);
   return result.rows[0];

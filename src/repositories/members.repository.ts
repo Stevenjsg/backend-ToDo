@@ -4,6 +4,7 @@ import { ProjectRole } from '../data/dataTypes'; // Import the role type
 // Simplified member info structure
 interface ProjectMember {
   usuario_id: number;
+  usuario_uuid: string; // Public identifier of the user (for routes)
   proyecto_id: number;
   rol: ProjectRole;
   email: string; // We'll join with 'usuarios' to get email
@@ -35,7 +36,7 @@ export const add = async (userId: number, projectId: number, role: ProjectRole):
 // Find all members of a project (joining with users table)
 export const findByProjectId = async (projectId: number): Promise<ProjectMember[]> => {
   const query = `
-    SELECT mp.usuario_id, mp.proyecto_id, mp.rol, u.email, u.nombre_completo
+    SELECT mp.usuario_id, u.uuid AS usuario_uuid, mp.proyecto_id, mp.rol, u.email, u.nombre_completo
     FROM miembros_proyecto mp
     JOIN usuarios u ON mp.usuario_id = u.id
     WHERE mp.proyecto_id = $1;
@@ -47,7 +48,7 @@ export const findByProjectId = async (projectId: number): Promise<ProjectMember[
 // Find a specific member's details
 export const findByIds = async (userId: number, projectId: number): Promise<ProjectMember | null> => {
     const query = `
-      SELECT mp.usuario_id, mp.proyecto_id, mp.rol, u.email, u.nombre_completo
+      SELECT mp.usuario_id, u.uuid AS usuario_uuid, mp.proyecto_id, mp.rol, u.email, u.nombre_completo
       FROM miembros_proyecto mp
       JOIN usuarios u ON mp.usuario_id = u.id
       WHERE mp.usuario_id = $1 AND mp.proyecto_id = $2;

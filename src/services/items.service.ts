@@ -63,12 +63,12 @@ export const createItem = async (
 };
 
 export const updateItem = async (
-  id: number,
+  uuid: string,
   data: Partial<Omit<Item, "id" | "usuario_id" | "fecha_creacion">>,
   userId: number
 ) => {
-  // 1. Obtener el item actual para saber si es de proyecto o personal
-  const existingItem = await itemsRepository.findByIdInternal(id);
+  // 1. Obtener el item actual (por UUID) para saber si es de proyecto o personal
+  const existingItem = await itemsRepository.findByUuidInternal(uuid);
 
   if (!existingItem) {
     throw new Error("ITEM_NOT_FOUND_OR_FORBIDDEN");
@@ -86,7 +86,7 @@ export const updateItem = async (
 
     // Usamos una función que NO filtra por usuario creador, sino por proyecto
     updatedItem = await itemsRepository.updateByProjectId(
-      id,
+      existingItem.id,
       data,
       existingItem.proyecto_id
     );
@@ -97,7 +97,7 @@ export const updateItem = async (
       throw new Error("ITEM_NOT_FOUND_OR_FORBIDDEN");
     }
     // Usamos la función estándar
-    updatedItem = await itemsRepository.update(id, data, userId);
+    updatedItem = await itemsRepository.update(existingItem.id, data, userId);
   }
 
   if (!updatedItem) {
@@ -115,9 +115,9 @@ export const updateItem = async (
   return updatedItem;
 };
 
-export const deleteItem = async (id: number, userId: number) => {
-  // 1. Obtener el item para ver de qué tipo es
-  const itemToDelete = await itemsRepository.findByIdInternal(id); // (Asegúrate de tener un findById que no requiera userId para esta comprobación inicial, o usa el que ya tienes si devuelve el item aunque no sea tuyo)
+export const deleteItem = async (uuid: string, userId: number) => {
+  // 1. Obtener el item (por UUID) para ver de qué tipo es
+  const itemToDelete = await itemsRepository.findByUuidInternal(uuid);
 
   if (!itemToDelete) {
     throw new Error("ITEM_NOT_FOUND_OR_FORBIDDEN");
@@ -145,7 +145,7 @@ export const deleteItem = async (id: number, userId: number) => {
     if (itemToDelete.usuario_id !== userId) {
       throw new Error("ITEM_NOT_FOUND_OR_FORBIDDEN");
     }
-    deletedRows = await itemsRepository.remove(id, userId);
+    deletedRows = await itemsRepository.remove(itemToDelete.id, userId);
   }
 
   if (deletedRows === 0) {

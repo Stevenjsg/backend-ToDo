@@ -1,98 +1,101 @@
 import { Request, Response } from 'express';
 import * as membersService from '../../services/members.service';
+import * as projectRepository from '../../repositories/project.repository';
+import * as userRepository from '../../repositories/user.repository';
 import { ProjectRole } from '../../data/dataTypes';
 import { io } from '../../index';
 import * as projectService from '../../services/project.service';
 
-export const addMember = async (req: Request, res: Response) => {
-    try {
-        const projectId = parseInt(req.params.projectId);
-        const { email, role } = req.body;
-        const requesterId = req.user!.id;
-
-        const newMember = await membersService.addMember(projectId, email, role as ProjectRole, requesterId);
-        res.status(201).json(newMember);
-    } catch (error: any) {
-        if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'Permission denied.' });
-        if (error.message === 'USER_TO_ADD_NOT_FOUND') return res.status(404).json({ message: 'User with that email not found.' });
-        if (error.message === 'CANNOT_ADD_SELF') return res.status(400).json({ message: 'Cannot add yourself as a member.' });
-        if (error.message === 'CANNOT_CHANGE_OWNER_ROLE') return res.status(400).json({ message: 'Cannot change the role of the project owner.'});
-        console.error("Add Member Error:", error);
-        res.status(500).json({ message: 'Error adding member.' });
-    }
-};
-
-export const getMembers = async (req: Request, res: Response) => {
-     try {
-        const projectId = parseInt(req.params.projectId);
-        const requesterId = req.user!.id;
-        const members = await membersService.getProjectMembers(projectId, requesterId);
-        res.status(200).json(members);
-    } catch (error: any) {
-        if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'You are not a member of this project.' });
-        res.status(500).json({ message: 'Error fetching members.' });
-    }
-};
-
-export const updateMemberRole = async (req: Request, res: Response) => {
-    try {
-        const projectId = parseInt(req.params.projectId);
-        const userIdToUpdate = parseInt(req.params.userId);
-        const { role } = req.body;
-        const requesterId = req.user!.id;
-
-        const updatedMember = await membersService.updateMemberRole(projectId, userIdToUpdate, role as ProjectRole, requesterId);
-        res.status(200).json(updatedMember);
-    } catch (error: any) {
-        if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'Only the owner can change roles.' });
-        if (error.message === 'OWNER_CANNOT_DEMOTE_SELF') return res.status(400).json({ message: 'Owner cannot demote themselves.' });
-        if (error.message === 'CANNOT_CHANGE_OWNER_ROLE') return res.status(400).json({ message: 'Cannot change the role of the project owner.'});
-        if (error.message === 'MEMBER_NOT_FOUND') return res.status(404).json({ message: 'Member not found in this project.' });
-        res.status(500).json({ message: 'Error updating member role.' });
-    }
-};
-
-export const removeMember = async (req: Request, res: Response) => {
-     try {
-        const projectId = parseInt(req.params.projectId);
-        const userIdToRemove = parseInt(req.params.userId);
-        const requesterId = req.user!.id;
-
-        await membersService.removeMember(projectId, userIdToRemove, requesterId);
-        res.status(204).send();
-    } catch (error: any) {
-        if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'Only the owner can remove members.' });
-        if (error.message === 'CANNOT_REMOVE_SELF') return res.status(400).json({ message: 'Owner cannot remove themselves.' });
-        if (error.message === 'Cannot remove the project owner.') return res.status(400).json({ message: 'Cannot remove the project owner.' });
-        if (error.message === 'MEMBER_NOT_FOUND') return res.status(404).json({ message: 'Member not found in this project.' });
-        res.status(500).json({ message: 'Error removing member.' });
-    }
-};
+// Invita (añade) un miembro al proyecto por email. POST /:projectUuid/members
 export const inviteMember = async (req: Request, res: Response) => {
   try {
-    // Recuerda: en routes.ts definimos router.use('/:projectUuid/members', ...)
-    // así que tenemos acceso a req.params.projectUuid
-    const { projectUuid } = req.params; 
+    const { projectUuid } = req.params;
     const { email, role } = req.body;
     const requesterId = req.user!.id;
 
-    const newMember = await membersService.addMemberByEmail(projectUuid, email, role || 'viewer', requesterId);
+    const newMember = await membersService.addMemberByEmail(
+      projectUuid,
+      email,
+      (role as ProjectRole) || 'viewer',
+      requesterId
+    );
     if (!newMember) {
-        return res.status(500).json({ message: 'Error al añadir el miembro.' });
+      return res.status(500).json({ message: 'Error al añadir el miembro.' });
     }
-    const projectData = await projectService.getProjectById(newMember.proyecto_id, newMember.usuario_id);
 
+    // Notificar al usuario invitado en su sala personal con los datos del proyecto
+    const projectData = await projectService.getProjectById(
+      newMember.proyecto_id,
+      newMember.usuario_id
+    );
     const userRoom = `user_${newMember.usuario_id}`;
     console.log(`📢 Notifying user in room ${userRoom} about new project`);
-    
     io.to(userRoom).emit('project_received', projectData);
-
 
     res.status(201).json(newMember);
   } catch (error: any) {
+    if (error.message === 'PROJECT_NOT_FOUND') return res.status(404).json({ message: 'Proyecto no encontrado.' });
     if (error.message === 'USER_NOT_FOUND') return res.status(404).json({ message: 'Usuario no encontrado.' });
     if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'No tienes permiso para invitar.' });
-    // ... otros errores
+    if (error.message === 'CANNOT_ADD_SELF') return res.status(400).json({ message: 'No puedes añadirte a ti mismo.' });
+    console.error('Invite Member Error:', error);
     res.status(500).json({ message: 'Error al invitar miembro.' });
+  }
+};
+
+export const getMembers = async (req: Request, res: Response) => {
+  try {
+    const projectId = await projectRepository.findIdByUuid(req.params.projectUuid);
+    if (!projectId) return res.status(404).json({ message: 'Project not found.' });
+
+    const requesterId = req.user!.id;
+    const members = await membersService.getProjectMembers(projectId, requesterId);
+    res.status(200).json(members);
+  } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'You are not a member of this project.' });
+    res.status(500).json({ message: 'Error fetching members.' });
+  }
+};
+
+export const updateMemberRole = async (req: Request, res: Response) => {
+  try {
+    const projectId = await projectRepository.findIdByUuid(req.params.projectUuid);
+    if (!projectId) return res.status(404).json({ message: 'Project not found.' });
+
+    const userIdToUpdate = await userRepository.findIdByUuid(req.params.userUuid);
+    if (!userIdToUpdate) return res.status(404).json({ message: 'User not found.' });
+
+    const { role } = req.body;
+    const requesterId = req.user!.id;
+
+    const updatedMember = await membersService.updateMemberRole(projectId, userIdToUpdate, role as ProjectRole, requesterId);
+    res.status(200).json(updatedMember);
+  } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'Only the owner can change roles.' });
+    if (error.message === 'OWNER_CANNOT_DEMOTE_SELF') return res.status(400).json({ message: 'Owner cannot demote themselves.' });
+    if (error.message === 'CANNOT_CHANGE_OWNER_ROLE') return res.status(400).json({ message: 'Cannot change the role of the project owner.' });
+    if (error.message === 'MEMBER_NOT_FOUND') return res.status(404).json({ message: 'Member not found in this project.' });
+    res.status(500).json({ message: 'Error updating member role.' });
+  }
+};
+
+export const removeMember = async (req: Request, res: Response) => {
+  try {
+    const projectId = await projectRepository.findIdByUuid(req.params.projectUuid);
+    if (!projectId) return res.status(404).json({ message: 'Project not found.' });
+
+    const userIdToRemove = await userRepository.findIdByUuid(req.params.userUuid);
+    if (!userIdToRemove) return res.status(404).json({ message: 'User not found.' });
+
+    const requesterId = req.user!.id;
+
+    await membersService.removeMember(projectId, userIdToRemove, requesterId);
+    res.status(204).send();
+  } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') return res.status(403).json({ message: 'Only the owner can remove members.' });
+    if (error.message === 'CANNOT_REMOVE_SELF') return res.status(400).json({ message: 'Owner cannot remove themselves.' });
+    if (error.message === 'Cannot remove the project owner.') return res.status(400).json({ message: 'Cannot remove the project owner.' });
+    if (error.message === 'MEMBER_NOT_FOUND') return res.status(404).json({ message: 'Member not found in this project.' });
+    res.status(500).json({ message: 'Error removing member.' });
   }
 };

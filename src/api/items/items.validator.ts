@@ -17,7 +17,7 @@ export const validateCreateItem = [
 
 // Validation rules for updating an item
 export const validateUpdateItem = [
-    param('id').isInt().withMessage('El ID debe ser un número entero'), // Validate ID from URL param
+    param('uuid').isUUID(4).withMessage('El UUID del item debe ser un UUID válido'), // Validate UUID from URL param
     // Make all body fields optional but validate their type if present
     body('tipo').optional().isIn(['task', 'note', 'reminder']),
     body('titulo').optional().isString(),

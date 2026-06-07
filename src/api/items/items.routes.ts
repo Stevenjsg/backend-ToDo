@@ -13,11 +13,11 @@ router.get('/', getItems);
 // Apply validation middleware before the controller
 router.post('/', validateCreateItem, handleValidationErrors, createItem);
 
-router.put('/:id', validateUpdateItem, handleValidationErrors, updateItem);
+router.put('/:uuid', validateUpdateItem, handleValidationErrors, updateItem);
 
-// Add simple ID validation for delete
-router.delete('/:id',
-    param('id').isInt().withMessage('El ID debe ser un número entero'),
+// Add simple UUID validation for delete
+router.delete('/:uuid',
+    param('uuid').isUUID(4).withMessage('El UUID del item debe ser un UUID válido'),
     handleValidationErrors,
     deleteItem
 );

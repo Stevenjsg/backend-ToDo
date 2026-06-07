@@ -175,17 +175,20 @@ export const updateByProjectId = async (
 };
 
 /**
- * Busca un item exclusivamente por su ID, sin validar el usuario.
- * Útil para lógica de negocio donde primero necesitamos saber a qué proyecto pertenece.
- * @param id El ID del item a buscar.
+ * Busca un item exclusivamente por su UUID público, sin validar el usuario.
+ * Útil para lógica de negocio donde primero necesitamos saber a qué proyecto
+ * pertenece (y obtener su id interno para las operaciones posteriores).
+ * @param uuid El UUID del item a buscar.
  * @returns El objeto Item completo o null.
  */
-export const findByIdInternal = async (id: number): Promise<Item | null> => {
+export const findByUuidInternal = async (
+  uuid: string
+): Promise<Item | null> => {
   const query = `
     SELECT * FROM items
-    WHERE id = $1;
+    WHERE uuid = $1;
   `;
-  const result = await pool.query(query, [id]);
+  const result = await pool.query(query, [uuid]);
 
   return result.rows[0] || null;
 };

@@ -18,10 +18,13 @@ export const getItems = async (req: Request, res: Response) => {
     } // Si no viene, o es 'null'/'undefined', se queda como null (tareas personales)
 
     // 👇 Pasa el proyectoId (número o null) al servicio
-    const items = await itemsService.getItemsByUserId(userId, type, proyectoId); 
-    
+    const items = await itemsService.getItemsByUserId(userId, type, proyectoId);
+
     res.status(200).json(items);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') {
+      return res.status(403).json({ message: 'No perteneces a este proyecto.' });
+    }
     res.status(500).json({ message: 'Error fetching items' });
   }
 };
@@ -42,6 +45,9 @@ export const createItem = async (req: Request, res: Response) => {
     const newItem = await itemsService.createItem(newItemData, userId);
     res.status(201).json(newItem);
   } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') {
+      return res.status(403).json({ message: 'No tienes permiso para crear items en este proyecto.' });
+    }
     console.error("Error creating item:", error); // Log the actual error
     res.status(500).json({ message: 'Error creating item', error: error.message });
   }
@@ -49,7 +55,7 @@ export const createItem = async (req: Request, res: Response) => {
 
 export const updateItem = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const uuid = req.params.uuid;
     const userId = req.user!.id;
     const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia } = req.body;
     
@@ -69,10 +75,13 @@ export const updateItem = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'No update data provided.' });
     }
 
-    const updatedItem = await itemsService.updateItem(id, updateData, userId);
+    const updatedItem = await itemsService.updateItem(uuid, updateData, userId);
     res.status(200).json(updatedItem);
 
   } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') {
+      return res.status(403).json({ message: 'No tienes permiso para editar este item.' });
+    }
     if (error.message === 'ITEM_NOT_FOUND_OR_FORBIDDEN') {
       return res.status(404).json({ message: 'Item not found or permission denied.' });
     }
@@ -82,13 +91,16 @@ export const updateItem = async (req: Request, res: Response) => {
 
 export const deleteItem = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const uuid = req.params.uuid;
     const userId = req.user!.id;
 
-    await itemsService.deleteItem(id, userId);
+    await itemsService.deleteItem(uuid, userId);
     res.status(204).send(); // No Content
 
   } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') {
+      return res.status(403).json({ message: 'No tienes permiso para borrar este item.' });
+    }
     if (error.message === 'ITEM_NOT_FOUND_OR_FORBIDDEN') {
       return res.status(404).json({ message: 'Item not found or permission denied.' });
     }

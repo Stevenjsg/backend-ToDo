@@ -7,6 +7,7 @@ export type ProjectRole = "owner" | "editor" | "viewer";
 // Interface for Items (Tasks, Notes, Reminders)
 export interface Item {
   id: number;
+  uuid: string; // Public identifier used in routes
   usuario_id: number;
   proyecto_id: number | null;
   tipo: ItemType;
@@ -24,6 +25,7 @@ export interface Item {
 // Interface for User Profile (add new fields)
 export interface UserProfile {
   id: number;
+  uuid: string; // Public identifier used in routes
   email: string;
   nombre_completo: string | null;
   avatar_url: string | null;
