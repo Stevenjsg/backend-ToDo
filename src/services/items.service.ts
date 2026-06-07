@@ -23,14 +23,22 @@ const emitToRelevantRooms = (
 
 // En src/services/items.service.ts
 
-export const getItemsByUserId = (
+export const getItemsByUserId = async (
   userId: number,
   type?: Item["tipo"],
   proyectoId?: number | null
 ) => {
-  // 👈 Añade proyectoId aquí
-  // Pasa el proyectoId (que puede ser un número o null) al repositorio
-  return itemsRepository.findByUserId(userId, type, proyectoId); // 👈 Pásalo aquí
+  // Si se piden items de un proyecto, verificar que el usuario es miembro
+  // (cualquier rol). Así devolvemos TODOS los items del proyecto de forma
+  // colaborativa, pero solo a quien pertenece a él.
+  if (proyectoId) {
+    await membersService.checkRolPermission(userId, proyectoId, [
+      "owner",
+      "editor",
+      "viewer",
+    ]);
+  }
+  return itemsRepository.findByUserId(userId, type, proyectoId);
 };
 
 export const createItem = async (

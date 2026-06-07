@@ -13,27 +13,28 @@ export const findByUserId = async (
   tipo?: Item["tipo"],
   proyectoId?: number | null
 ): Promise<Item[]> => {
-  let query = `
-    SELECT * FROM items
-    WHERE usuario_id = $1
-  `;
-  const params: any[] = [userId];
-  let paramIndex = 2; // Start index for additional params
+  const params: any[] = [];
+  let query = `SELECT * FROM items WHERE `;
+  let paramIndex = 1;
+
+  // 👇 LÓGICA DE PROYECTO 👇
+  if (proyectoId === null || proyectoId === undefined) {
+    // Items PERSONALES: solo los del propio usuario y sin proyecto.
+    query += `usuario_id = $${paramIndex} AND proyecto_id IS NULL`;
+    params.push(userId);
+    paramIndex++;
+  } else {
+    // Items de PROYECTO: TODOS los del proyecto (vista colaborativa),
+    // sin importar quién los creó. La pertenencia al proyecto se valida
+    // en el service antes de llegar aquí.
+    query += `proyecto_id = $${paramIndex}`;
+    params.push(proyectoId);
+    paramIndex++;
+  }
 
   if (tipo) {
     query += ` AND tipo = $${paramIndex}`;
     params.push(tipo);
-    paramIndex++;
-  }
-
-  // 👇 AQUÍ LA LÓGICA DE PROYECTO 👇
-  if (proyectoId === null || proyectoId === undefined) {
-    // Si no se especifica proyecto o es null, busca items personales
-    query += ` AND proyecto_id IS NULL`;
-  } else {
-    // Si se especifica un ID, busca items de ese proyecto
-    query += ` AND proyecto_id = $${paramIndex}`;
-    params.push(proyectoId);
     paramIndex++;
   }
 
