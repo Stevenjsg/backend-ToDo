@@ -123,6 +123,55 @@ export const updateItem = async (
   return updatedItem;
 };
 
+/**
+ * Crea en bloque las sub-tareas (bloques) de un item padre de un grupo.
+ * Solo owner/editor del grupo. Emite item_created por cada sub-tarea.
+ */
+export const createSubtasks = async (
+  parentUuid: string,
+  blocks: Array<{
+    titulo: string;
+    descripcion?: string | null;
+    pomodoros_estimados?: number | null;
+    assignee_id?: number | null;
+  }>,
+  userId: number
+) => {
+  const parent = await itemsRepository.findByUuidInternal(parentUuid);
+  if (!parent) {
+    throw new Error("ITEM_NOT_FOUND_OR_FORBIDDEN");
+  }
+  if (parent.parent_id) {
+    // No anidamos más de un nivel: un bloque no puede tener bloques.
+    throw new Error("PARENT_IS_SUBTASK");
+  }
+
+  if (parent.proyecto_id) {
+    await membersService.checkRolPermission(userId, parent.proyecto_id, [
+      "owner",
+      "editor",
+    ]);
+  } else if (parent.usuario_id !== userId) {
+    throw new Error("ITEM_NOT_FOUND_OR_FORBIDDEN");
+  }
+
+  const created = await itemsRepository.createSubtasks(parent, blocks, userId);
+
+  for (const item of created) {
+    emitToRelevantRooms("item_created", item, userId, item.proyecto_id);
+  }
+
+  return created;
+};
+
+/**
+ * Tareas pendientes del usuario para el selector del Pomodoro
+ * (personales + asignadas a él en grupos).
+ */
+export const getFocusItems = (userId: number) => {
+  return itemsRepository.findFocusItems(userId);
+};
+
 export const deleteItem = async (uuid: string, userId: number) => {
   // 1. Obtener el item (por UUID) para ver de qué tipo es
   const itemToDelete = await itemsRepository.findByUuidInternal(uuid);

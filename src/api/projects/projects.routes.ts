@@ -5,6 +5,7 @@ import {
   getProject,
   updateProject,
   deleteProject,
+  getProgress,
 } from "./projects.controller";
 import { protect } from "../../middleware/auth.middleware";
 import { body, param } from "express-validator";
@@ -46,6 +47,12 @@ router.delete(
   deleteProject
 );
 router.use("/:projectUuid/members", membersRouter);
+router.get(
+  "/:uuid/progress",
+  validateProjectUuid,
+  handleValidationErrors,
+  getProgress
+);
 router.get(
   "/:uuid/my-role",
   validateProjectUuid,

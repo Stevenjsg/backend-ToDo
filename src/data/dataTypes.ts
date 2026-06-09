@@ -20,6 +20,28 @@ export interface Item {
   prioridad: ItemPriority | null;
   etiquetas: string[];
   regla_recurrencia: string | null;
+  parent_id: number | null; // sub-tarea: id interno del item padre (bloque de un tema)
+  assignee_id: number | null; // reparto por persona: id interno del usuario asignado
+  pomodoros_estimados: number | null; // estimación en pomodoros del bloque
+}
+
+// Bloque propuesto por la IA al dividir un tema (aún sin persistir)
+export interface AiBlock {
+  titulo: string;
+  descripcion: string;
+  pomodoros_estimados: number;
+}
+
+// Fila de progreso del grupo por miembro
+export interface MemberProgress {
+  usuario_id: number;
+  usuario_uuid: string;
+  nombre_completo: string | null;
+  email: string;
+  total_asignadas: number;
+  completadas: number;
+  pomodoros: number;
+  minutos_trabajo: number;
 }
 
 // Interface for User Profile (add new fields)

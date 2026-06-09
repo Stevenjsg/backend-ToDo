@@ -1,5 +1,5 @@
 import { pool } from "../config/database";
-import { ProjectRole } from "../data/dataTypes";
+import { MemberProgress, ProjectRole } from "../data/dataTypes";
 
 // Basic structure for Project (define fully in dataTypes.ts later)
 interface Project {
@@ -113,6 +113,49 @@ export const update = async (
     `;
   const result = await pool.query(query, [name, description, uuid, ownerId]); // 2. Pasa uuid
   return result.rows[0] || null;
+};
+
+/**
+ * Progreso del grupo por miembro: tareas asignadas (totales/completadas) y
+ * pomodoros de trabajo registrados sobre items del proyecto.
+ */
+export const getProgress = async (
+  projectId: number
+): Promise<MemberProgress[]> => {
+  const query = `
+    SELECT
+      u.id   AS usuario_id,
+      u.uuid AS usuario_uuid,
+      u.nombre_completo,
+      u.email,
+      COALESCE(t.total_asignadas, 0)::int AS total_asignadas,
+      COALESCE(t.completadas, 0)::int     AS completadas,
+      COALESCE(ps.pomodoros, 0)::int      AS pomodoros,
+      COALESCE(ps.minutos_trabajo, 0)::int AS minutos_trabajo
+    FROM miembros_proyecto mp
+    JOIN usuarios u ON u.id = mp.usuario_id
+    LEFT JOIN (
+      SELECT assignee_id,
+             COUNT(*) AS total_asignadas,
+             COUNT(*) FILTER (WHERE completada) AS completadas
+      FROM items
+      WHERE proyecto_id = $1 AND tipo = 'task' AND assignee_id IS NOT NULL
+      GROUP BY assignee_id
+    ) t ON t.assignee_id = u.id
+    LEFT JOIN (
+      SELECT s.usuario_id,
+             COUNT(*) AS pomodoros,
+             SUM(s.duracion_minutos) AS minutos_trabajo
+      FROM pomodoro_sesiones s
+      JOIN items i ON i.id = s.item_id
+      WHERE i.proyecto_id = $1 AND s.tipo_sesion = 'trabajo'
+      GROUP BY s.usuario_id
+    ) ps ON ps.usuario_id = u.id
+    WHERE mp.proyecto_id = $1
+    ORDER BY u.nombre_completo NULLS LAST, u.email;
+  `;
+  const result = await pool.query(query, [projectId]);
+  return result.rows;
 };
 
 // Delete a project (only allow owner to delete)

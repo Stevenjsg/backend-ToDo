@@ -32,6 +32,20 @@ export const deleteProject = async (uuid: string, userId: number) => {
     if (deletedRows === 0) throw new Error('PROJECT_NOT_FOUND_OR_FORBIDDEN');
     return deletedRows;
 };
+/**
+ * Progreso del grupo por miembro. Cualquier miembro (incluido viewer) puede
+ * verlo: el punto del producto es que TODO el grupo vea el avance de todos.
+ */
+export const getProjectProgress = async (uuid: string, userId: number) => {
+    const projectId = await projectRepository.findIdByUuid(uuid);
+    if (!projectId) throw new Error('PROJECT_NOT_FOUND_OR_FORBIDDEN');
+
+    const userRole = await membersRepository.findUserRole(userId, projectId);
+    if (!userRole) throw new Error('PROJECT_NOT_FOUND_OR_FORBIDDEN');
+
+    return projectRepository.getProgress(projectId);
+};
+
 export const getProjectById = async (projectId: number, userId: number) => {
     // 1. Verificar que el usuario (userId) es miembro del proyecto
     // Esto es importante por seguridad: no devolvemos datos si no pertenece al proyecto.

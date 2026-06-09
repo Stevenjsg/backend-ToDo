@@ -32,7 +32,7 @@ export const getItems = async (req: Request, res: Response) => {
 export const createItem = async (req: Request, res: Response) => {
   try {
     // Expect all relevant fields from the body now
-    const { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id } = req.body;
+    const { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id, parent_id, assignee_id, pomodoros_estimados } = req.body;
     const userId = req.user!.id;
 
     // Basic validation (service should handle more complex cases)
@@ -40,7 +40,7 @@ export const createItem = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Tipo and Titulo are required.' });
     }
 
-    const newItemData = { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id };
+    const newItemData = { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id, parent_id, assignee_id, pomodoros_estimados };
 
     const newItem = await itemsService.createItem(newItemData, userId);
     res.status(201).json(newItem);
@@ -57,12 +57,12 @@ export const updateItem = async (req: Request, res: Response) => {
   try {
     const uuid = req.params.uuid;
     const userId = req.user!.id;
-    const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia } = req.body;
-    
+    const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados } = req.body;
+
     // Define el tipo explícito para mayor claridad
-    type UpdateDataType = Partial<Pick<Item, 'titulo' | 'descripcion' | 'completada' | 'fecha_vencimiento' | 'prioridad' | 'etiquetas' | 'regla_recurrencia'>>;
-    
-    const updateData: UpdateDataType = { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia };
+    type UpdateDataType = Partial<Pick<Item, 'titulo' | 'descripcion' | 'completada' | 'fecha_vencimiento' | 'prioridad' | 'etiquetas' | 'regla_recurrencia' | 'assignee_id' | 'pomodoros_estimados'>>;
+
+    const updateData: UpdateDataType = { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados };
 
     // Filtra las claves undefined usando la aserción de tipo
     (Object.keys(updateData) as Array<keyof UpdateDataType>).forEach(key => {
@@ -86,6 +86,48 @@ export const updateItem = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Item not found or permission denied.' });
     }
     res.status(500).json({ message: 'Error updating item' });
+  }
+};
+
+// Crea en bloque las sub-tareas (bloques) de un item padre
+export const createSubtasks = async (req: Request, res: Response) => {
+  try {
+    const parentUuid = req.params.uuid;
+    const userId = req.user!.id;
+    const { bloques } = req.body as {
+      bloques: Array<{
+        titulo: string;
+        descripcion?: string | null;
+        pomodoros_estimados?: number | null;
+        assignee_id?: number | null;
+      }>;
+    };
+
+    const created = await itemsService.createSubtasks(parentUuid, bloques, userId);
+    res.status(201).json(created);
+  } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') {
+      return res.status(403).json({ message: 'No tienes permiso para crear sub-tareas en este grupo.' });
+    }
+    if (error.message === 'ITEM_NOT_FOUND_OR_FORBIDDEN') {
+      return res.status(404).json({ message: 'Item not found or permission denied.' });
+    }
+    if (error.message === 'PARENT_IS_SUBTASK') {
+      return res.status(400).json({ message: 'Una sub-tarea no puede tener sub-tareas.' });
+    }
+    console.error('Error creating subtasks:', error);
+    res.status(500).json({ message: 'Error creating subtasks' });
+  }
+};
+
+// Tareas pendientes para el selector del Pomodoro (personales + asignadas)
+export const getFocusItems = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const items = await itemsService.getFocusItems(userId);
+    res.status(200).json(items);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching focus items' });
   }
 };
 

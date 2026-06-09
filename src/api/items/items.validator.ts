@@ -13,6 +13,19 @@ export const validateCreateItem = [
     body('etiquetas.*').optional().isString().withMessage('Cada etiqueta debe ser un string'), // Validate each element
     body('regla_recurrencia').optional({ nullable: true }).isString(),
     body('proyecto_id').optional({ nullable: true }).isInt(),
+    body('parent_id').optional({ nullable: true }).isInt(),
+    body('assignee_id').optional({ nullable: true }).isInt(),
+    body('pomodoros_estimados').optional({ nullable: true }).isInt({ min: 1 }),
+];
+
+// Validation rules for creating subtasks in bulk (blocks of a topic)
+export const validateCreateSubtasks = [
+    param('uuid').isUUID(4).withMessage('El UUID del item padre debe ser un UUID válido'),
+    body('bloques').isArray({ min: 1, max: 30 }).withMessage('bloques debe ser un array (1-30)'),
+    body('bloques.*.titulo').notEmpty().withMessage('Cada bloque necesita un título').isString(),
+    body('bloques.*.descripcion').optional({ nullable: true }).isString(),
+    body('bloques.*.pomodoros_estimados').optional({ nullable: true }).isInt({ min: 1 }),
+    body('bloques.*.assignee_id').optional({ nullable: true }).isInt(),
 ];
 
 // Validation rules for updating an item
@@ -29,6 +42,8 @@ export const validateUpdateItem = [
     body('etiquetas.*').optional().isString(),
     body('regla_recurrencia').optional({ nullable: true }).isString(),
     body('proyecto_id').optional({ nullable: true }).isInt(),
+    body('assignee_id').optional({ nullable: true }).isInt(),
+    body('pomodoros_estimados').optional({ nullable: true }).isInt({ min: 1 }),
 ];
 
 // Middleware to handle validation errors

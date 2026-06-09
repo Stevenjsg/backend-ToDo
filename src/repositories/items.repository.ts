@@ -66,11 +66,14 @@ export const create = async (
     prioridad = "media", // Default priority, adjust as needed
     etiquetas = [],
     regla_recurrencia = null,
+    parent_id = null,
+    assignee_id = null,
+    pomodoros_estimados = null,
   } = data;
 
   const query = `
-    INSERT INTO items (usuario_id, tipo, titulo, descripcion, proyecto_id, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    INSERT INTO items (usuario_id, tipo, titulo, descripcion, proyecto_id, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, parent_id, assignee_id, pomodoros_estimados)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     RETURNING *;
   `;
   const params = [
@@ -84,10 +87,77 @@ export const create = async (
     prioridad,
     etiquetas,
     regla_recurrencia,
+    parent_id,
+    assignee_id,
+    pomodoros_estimados,
   ];
 
   const result = await pool.query(query, params);
   return result.rows[0];
+};
+
+/**
+ * Crea varias sub-tareas (bloques) bajo un item padre, en una transacción.
+ * @returns Los items creados, en el mismo orden.
+ */
+export const createSubtasks = async (
+  parent: Item,
+  blocks: Array<{
+    titulo: string;
+    descripcion?: string | null;
+    pomodoros_estimados?: number | null;
+    assignee_id?: number | null;
+  }>,
+  userId: number
+): Promise<Item[]> => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const created: Item[] = [];
+    for (const block of blocks) {
+      const result = await client.query(
+        `INSERT INTO items (usuario_id, tipo, titulo, descripcion, proyecto_id, parent_id, assignee_id, pomodoros_estimados)
+         VALUES ($1, 'task', $2, $3, $4, $5, $6, $7)
+         RETURNING *;`,
+        [
+          userId,
+          block.titulo,
+          block.descripcion ?? null,
+          parent.proyecto_id,
+          parent.id,
+          block.assignee_id ?? null,
+          block.pomodoros_estimados ?? null,
+        ]
+      );
+      created.push(result.rows[0]);
+    }
+    await client.query("COMMIT");
+    return created;
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Items pendientes "para enfocar" de un usuario: sus tareas personales
+ * pendientes + las tareas de grupo asignadas a él. Para el selector del Pomodoro.
+ */
+export const findFocusItems = async (userId: number): Promise<Item[]> => {
+  const query = `
+    SELECT i.*, p.nombre AS proyecto_nombre
+    FROM items i
+    LEFT JOIN proyectos p ON p.id = i.proyecto_id
+    WHERE i.tipo = 'task' AND i.completada = FALSE AND (
+      (i.proyecto_id IS NULL AND i.usuario_id = $1)
+      OR i.assignee_id = $1
+    )
+    ORDER BY i.fecha_actualizacion DESC;
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows;
 };
 
 /**

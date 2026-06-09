@@ -89,6 +89,24 @@ export const deleteProject = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Error deleting project" });
   }
 };
+// GET /api/projects/:uuid/progress — progreso del grupo por miembro
+export const getProgress = async (req: Request, res: Response) => {
+  try {
+    const projectUuid = req.params.uuid;
+    const userId = req.user!.id;
+    const progress = await projectService.getProjectProgress(projectUuid, userId);
+    res.status(200).json(progress);
+  } catch (error: any) {
+    if (error.message === "PROJECT_NOT_FOUND_OR_FORBIDDEN") {
+      return res
+        .status(404)
+        .json({ message: "Project not found or permission denied." });
+    }
+    console.error("Error fetching progress:", error);
+    res.status(500).json({ message: "Error fetching progress" });
+  }
+};
+
 export const getMyRole = async (req: Request, res: Response) => {
   try {
     const projectUuid = req.params.uuid;
