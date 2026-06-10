@@ -65,8 +65,9 @@ Responde ÚNICAMENTE con un array JSON válido, sin texto adicional ni markdown,
   return parseBlocks(text);
 };
 
-/** Extrae y valida el array JSON de bloques de la respuesta del modelo. */
-const parseBlocks = (text: string): AiBlock[] => {
+/** Extrae y valida el array JSON de bloques de la respuesta del modelo.
+ *  Exportada para tests unitarios. */
+export const parseBlocks = (text: string): AiBlock[] => {
   // Tolerar que el modelo envuelva el JSON en texto o ```json ... ```
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");

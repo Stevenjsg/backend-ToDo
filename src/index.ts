@@ -11,6 +11,7 @@ import pomodoroRouter from './api/pomodoro/pomodoro.routes';
 import projectsRouter from './api/projects/projects.routes';
 import remindersRouter from './api/reminder/reminder.routes';
 import aiRouter from './api/ai/ai.routes';
+import eventsRouter from './api/events/events.routes';
 import jwt from 'jsonwebtoken';
 import { UserPayload } from './data/dataTypes';
 
@@ -37,6 +38,7 @@ app.use('/api/pomodoro', pomodoroRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/events', eventsRouter);
 
 // --- Socket.IO Connection Logic ---
 io.on('connection', (socket) => {
