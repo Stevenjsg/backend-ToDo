@@ -69,11 +69,13 @@ export const create = async (
     parent_id = null,
     assignee_id = null,
     pomodoros_estimados = null,
+    tipo_entregable = null,
+    tamano_entregable = null,
   } = data;
 
   const query = `
-    INSERT INTO items (usuario_id, tipo, titulo, descripcion, proyecto_id, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, parent_id, assignee_id, pomodoros_estimados)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    INSERT INTO items (usuario_id, tipo, titulo, descripcion, proyecto_id, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, parent_id, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     RETURNING *;
   `;
   const params = [
@@ -90,6 +92,8 @@ export const create = async (
     parent_id,
     assignee_id,
     pomodoros_estimados,
+    tipo_entregable,
+    tamano_entregable,
   ];
 
   const result = await pool.query(query, params);

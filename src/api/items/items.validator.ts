@@ -1,5 +1,6 @@
 import { body, param, validationResult } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
+import { TIPOS_ENTREGABLE } from '../../data/dataTypes';
 
 // Validation rules for creating an item
 export const validateCreateItem = [
@@ -16,6 +17,8 @@ export const validateCreateItem = [
     body('parent_id').optional({ nullable: true }).isInt(),
     body('assignee_id').optional({ nullable: true }).isInt(),
     body('pomodoros_estimados').optional({ nullable: true }).isInt({ min: 1 }),
+    body('tipo_entregable').optional({ nullable: true }).isIn([...TIPOS_ENTREGABLE]),
+    body('tamano_entregable').optional({ nullable: true }).isString().isLength({ max: 120 }),
 ];
 
 // Validation rules for creating subtasks in bulk (blocks of a topic)
@@ -44,6 +47,8 @@ export const validateUpdateItem = [
     body('proyecto_id').optional({ nullable: true }).isInt(),
     body('assignee_id').optional({ nullable: true }).isInt(),
     body('pomodoros_estimados').optional({ nullable: true }).isInt({ min: 1 }),
+    body('tipo_entregable').optional({ nullable: true }).isIn([...TIPOS_ENTREGABLE]),
+    body('tamano_entregable').optional({ nullable: true }).isString().isLength({ max: 120 }),
 ];
 
 // Middleware to handle validation errors

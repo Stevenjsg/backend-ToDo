@@ -32,7 +32,7 @@ export const getItems = async (req: Request, res: Response) => {
 export const createItem = async (req: Request, res: Response) => {
   try {
     // Expect all relevant fields from the body now
-    const { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id, parent_id, assignee_id, pomodoros_estimados } = req.body;
+    const { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id, parent_id, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable } = req.body;
     const userId = req.user!.id;
 
     // Basic validation (service should handle more complex cases)
@@ -40,7 +40,7 @@ export const createItem = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Tipo and Titulo are required.' });
     }
 
-    const newItemData = { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id, parent_id, assignee_id, pomodoros_estimados };
+    const newItemData = { tipo, titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, proyecto_id, parent_id, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable };
 
     const newItem = await itemsService.createItem(newItemData, userId);
     res.status(201).json(newItem);
@@ -57,12 +57,12 @@ export const updateItem = async (req: Request, res: Response) => {
   try {
     const uuid = req.params.uuid;
     const userId = req.user!.id;
-    const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados } = req.body;
+    const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable } = req.body;
 
     // Define el tipo explícito para mayor claridad
-    type UpdateDataType = Partial<Pick<Item, 'titulo' | 'descripcion' | 'completada' | 'fecha_vencimiento' | 'prioridad' | 'etiquetas' | 'regla_recurrencia' | 'assignee_id' | 'pomodoros_estimados'>>;
+    type UpdateDataType = Partial<Pick<Item, 'titulo' | 'descripcion' | 'completada' | 'fecha_vencimiento' | 'prioridad' | 'etiquetas' | 'regla_recurrencia' | 'assignee_id' | 'pomodoros_estimados' | 'tipo_entregable' | 'tamano_entregable'>>;
 
-    const updateData: UpdateDataType = { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados };
+    const updateData: UpdateDataType = { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable };
 
     // Filtra las claves undefined usando la aserción de tipo
     (Object.keys(updateData) as Array<keyof UpdateDataType>).forEach(key => {

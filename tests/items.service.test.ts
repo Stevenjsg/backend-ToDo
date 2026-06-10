@@ -50,6 +50,8 @@ const baseItem = (overrides: Partial<Item> = {}): Item => ({
   parent_id: null,
   assignee_id: null,
   pomodoros_estimados: null,
+  tipo_entregable: null,
+  tamano_entregable: null,
   ...overrides,
 });
 

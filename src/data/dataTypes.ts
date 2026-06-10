@@ -23,7 +23,20 @@ export interface Item {
   parent_id: number | null; // sub-tarea: id interno del item padre (bloque de un tema)
   assignee_id: number | null; // reparto por persona: id interno del usuario asignado
   pomodoros_estimados: number | null; // estimación en pomodoros del bloque
+  tipo_entregable: string | null; // ensayo | investigacion | exposicion | ... (F3)
+  tamano_entregable: string | null; // "10 páginas", "15 min"... (F3)
 }
+
+export const TIPOS_ENTREGABLE = [
+  "ensayo",
+  "investigacion",
+  "exposicion",
+  "desarrollo",
+  "informe",
+  "maqueta",
+  "ejercicios",
+  "otro",
+] as const;
 
 // Bloque propuesto por la IA al dividir un tema (aún sin persistir)
 export interface AiBlock {

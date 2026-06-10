@@ -12,11 +12,15 @@ import * as membersRepository from "../../repositories/members.repository";
 export const splitTopic = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { tema, descripcion, num_bloques, proyecto_id } = req.body as {
+    const { tema, descripcion, num_bloques, proyecto_id, tipo_entregable, tamano_entregable, fecha_entrega, permitir_preguntas } = req.body as {
       tema: string;
       descripcion?: string | null;
       num_bloques?: number | null;
       proyecto_id?: number | null;
+      tipo_entregable?: string | null;
+      tamano_entregable?: string | null;
+      fecha_entrega?: string | null;
+      permitir_preguntas?: boolean;
     };
 
     let numMiembros: number | null = null;
@@ -30,14 +34,24 @@ export const splitTopic = async (req: Request, res: Response) => {
       numMiembros = members.length;
     }
 
-    const bloques = await aiService.splitTopicIntoBlocks(
+    const result = await aiService.splitTopicIntoBlocks(
       tema,
       descripcion,
       num_bloques,
-      numMiembros
+      numMiembros,
+      {
+        tipoEntregable: tipo_entregable,
+        tamano: tamano_entregable,
+        fechaEntrega: fecha_entrega,
+      },
+      permitir_preguntas !== false
     );
 
-    res.status(200).json({ bloques });
+    // O preguntas de aclaración, o bloques + supuestos (SDD §18.5)
+    if (result.preguntas) {
+      return res.status(200).json({ preguntas: result.preguntas });
+    }
+    res.status(200).json({ bloques: result.bloques, supuestos: result.supuestos ?? [] });
   } catch (error: any) {
     if (error.message === "PERMISSION_DENIED") {
       return res

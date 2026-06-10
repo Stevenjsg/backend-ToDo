@@ -1,65 +1,101 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseBlocks, splitTopicIntoBlocks } from '../src/services/ai.service';
+import { parseSplitResponse, splitTopicIntoBlocks } from '../src/services/ai.service';
 
-describe('parseBlocks', () => {
-  it('parsea un array JSON limpio', () => {
-    const text = JSON.stringify([
-      { titulo: 'Introducción', descripcion: 'Escribir intro', pomodoros_estimados: 2 },
-      { titulo: 'Conclusiones', descripcion: 'Cerrar', pomodoros_estimados: 1 },
-    ]);
-    const blocks = parseBlocks(text);
-    expect(blocks).toHaveLength(2);
-    expect(blocks[0].titulo).toBe('Introducción');
-    expect(blocks[0].pomodoros_estimados).toBe(2);
+describe('parseSplitResponse', () => {
+  it('parsea el objeto con bloques y supuestos', () => {
+    const text = JSON.stringify({
+      bloques: [
+        { titulo: 'Introducción', descripcion: 'Escribir intro', pomodoros_estimados: 2 },
+        { titulo: 'Conclusiones', descripcion: 'Cerrar', pomodoros_estimados: 1 },
+      ],
+      supuestos: ['Asumí ensayo escrito de ~5 páginas'],
+    });
+    const result = parseSplitResponse(text);
+    expect(result.bloques).toHaveLength(2);
+    expect(result.bloques![0].titulo).toBe('Introducción');
+    expect(result.supuestos).toEqual(['Asumí ensayo escrito de ~5 páginas']);
+    expect(result.preguntas).toBeUndefined();
+  });
+
+  it('parsea la variante de preguntas de aclaración', () => {
+    const text = JSON.stringify({
+      preguntas: ['¿Es ensayo o exposición?', '¿De cuántas páginas?'],
+    });
+    const result = parseSplitResponse(text);
+    expect(result.preguntas).toHaveLength(2);
+    expect(result.bloques).toBeUndefined();
+  });
+
+  it('limita las preguntas a 3', () => {
+    const text = JSON.stringify({ preguntas: ['a', 'b', 'c', 'd', 'e'] });
+    expect(parseSplitResponse(text).preguntas).toHaveLength(3);
   });
 
   it('tolera JSON envuelto en texto y fences de markdown', () => {
     const text =
-      'Claro, aquí tienes:\n```json\n[{"titulo":"Bloque A","descripcion":"x","pomodoros_estimados":3}]\n```\n¡Suerte!';
-    const blocks = parseBlocks(text);
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0].titulo).toBe('Bloque A');
+      'Claro:\n```json\n{"bloques":[{"titulo":"Bloque A","descripcion":"x","pomodoros_estimados":3}],"supuestos":[]}\n```\n¡Suerte!';
+    const result = parseSplitResponse(text);
+    expect(result.bloques).toHaveLength(1);
+    expect(result.supuestos).toEqual([]);
+  });
+
+  it('acepta el formato legado (array de bloques a secas)', () => {
+    const text = JSON.stringify([
+      { titulo: 'Legacy', descripcion: '', pomodoros_estimados: 2 },
+    ]);
+    const result = parseSplitResponse(text);
+    expect(result.bloques).toHaveLength(1);
+    expect(result.supuestos).toEqual([]);
   });
 
   it('normaliza estimaciones fuera de rango a 1', () => {
-    const text = JSON.stringify([
-      { titulo: 'A', descripcion: '', pomodoros_estimados: 0 },
-      { titulo: 'B', descripcion: '', pomodoros_estimados: 99 },
-      { titulo: 'C', descripcion: '', pomodoros_estimados: 'tres' },
-    ]);
-    const blocks = parseBlocks(text);
-    expect(blocks.map((b) => b.pomodoros_estimados)).toEqual([1, 1, 1]);
+    const text = JSON.stringify({
+      bloques: [
+        { titulo: 'A', descripcion: '', pomodoros_estimados: 0 },
+        { titulo: 'B', descripcion: '', pomodoros_estimados: 99 },
+        { titulo: 'C', descripcion: '', pomodoros_estimados: 'tres' },
+      ],
+    });
+    expect(parseSplitResponse(text).bloques!.map((b) => b.pomodoros_estimados)).toEqual([1, 1, 1]);
   });
 
   it('descarta bloques sin título y conserva los válidos', () => {
-    const text = JSON.stringify([
-      { titulo: '', descripcion: 'sin título', pomodoros_estimados: 1 },
-      { descripcion: 'tampoco', pomodoros_estimados: 1 },
-      { titulo: 'Válido', descripcion: 'ok', pomodoros_estimados: 2 },
-    ]);
-    const blocks = parseBlocks(text);
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0].titulo).toBe('Válido');
+    const text = JSON.stringify({
+      bloques: [
+        { titulo: '', descripcion: 'sin título', pomodoros_estimados: 1 },
+        { descripcion: 'tampoco', pomodoros_estimados: 1 },
+        { titulo: 'Válido', descripcion: 'ok', pomodoros_estimados: 2 },
+      ],
+    });
+    const result = parseSplitResponse(text);
+    expect(result.bloques).toHaveLength(1);
+    expect(result.bloques![0].titulo).toBe('Válido');
   });
 
-  it('recorta títulos a 255 caracteres', () => {
-    const text = JSON.stringify([
-      { titulo: 'x'.repeat(300), descripcion: '', pomodoros_estimados: 1 },
-    ]);
-    expect(parseBlocks(text)[0].titulo).toHaveLength(255);
+  it('recorta títulos a 255 caracteres y supuestos a 4', () => {
+    const text = JSON.stringify({
+      bloques: [{ titulo: 'x'.repeat(300), descripcion: '', pomodoros_estimados: 1 }],
+      supuestos: ['1', '2', '3', '4', '5', '6'],
+    });
+    const result = parseSplitResponse(text);
+    expect(result.bloques![0].titulo).toHaveLength(255);
+    expect(result.supuestos).toHaveLength(4);
   });
 
-  it('lanza AI_BAD_RESPONSE si no hay array JSON', () => {
-    expect(() => parseBlocks('No puedo ayudarte con eso.')).toThrow('AI_BAD_RESPONSE');
+  it('lanza AI_BAD_RESPONSE si no hay JSON', () => {
+    expect(() => parseSplitResponse('No puedo ayudarte con eso.')).toThrow('AI_BAD_RESPONSE');
   });
 
   it('lanza AI_BAD_RESPONSE con JSON inválido', () => {
-    expect(() => parseBlocks('[{"titulo": "rota...')).toThrow('AI_BAD_RESPONSE');
+    expect(() => parseSplitResponse('{"bloques": [{"titulo": "rota...')).toThrow('AI_BAD_RESPONSE');
   });
 
-  it('lanza AI_BAD_RESPONSE con array vacío o sin bloques válidos', () => {
-    expect(() => parseBlocks('[]')).toThrow('AI_BAD_RESPONSE');
-    expect(() => parseBlocks('[{"descripcion":"sin titulo"}]')).toThrow('AI_BAD_RESPONSE');
+  it('lanza AI_BAD_RESPONSE con bloques vacíos o preguntas vacías', () => {
+    expect(() => parseSplitResponse('{"bloques": []}')).toThrow('AI_BAD_RESPONSE');
+    expect(() => parseSplitResponse('{"preguntas": []}')).toThrow('AI_BAD_RESPONSE');
+    expect(() => parseSplitResponse('{"bloques": [{"descripcion":"sin titulo"}]}')).toThrow(
+      'AI_BAD_RESPONSE',
+    );
   });
 });
 
@@ -76,35 +112,61 @@ describe('splitTopicIntoBlocks', () => {
     vi.unstubAllGlobals();
   });
 
+  const mockFetch = (text: string) =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: [{ type: 'text', text }] }),
+    });
+
   it('lanza AI_NOT_CONFIGURED sin ANTHROPIC_API_KEY', async () => {
     delete process.env.ANTHROPIC_API_KEY;
     await expect(splitTopicIntoBlocks('Tema')).rejects.toThrow('AI_NOT_CONFIGURED');
   });
 
-  it('devuelve bloques cuando la API responde bien', async () => {
+  it('devuelve bloques y supuestos, y el prompt incluye tema y datos estructurados', async () => {
     process.env.ANTHROPIC_API_KEY = 'test-key';
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        content: [
-          {
-            type: 'text',
-            text: '[{"titulo":"Bloque 1","descripcion":"d","pomodoros_estimados":2}]',
-          },
-        ],
-      }),
-    });
+    const fetchMock = mockFetch(
+      '{"bloques":[{"titulo":"Bloque 1","descripcion":"d","pomodoros_estimados":2}],"supuestos":["s1"]}',
+    );
     vi.stubGlobal('fetch', fetchMock);
 
-    const blocks = await splitTopicIntoBlocks('Guerra Fría', 'ensayo', 1, 4);
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0].titulo).toBe('Bloque 1');
+    const result = await splitTopicIntoBlocks('Guerra Fría', 'ensayo', 1, 4, {
+      tipoEntregable: 'ensayo',
+      tamano: '10 páginas',
+      fechaEntrega: '2026-06-20',
+    });
+    expect(result.bloques).toHaveLength(1);
+    expect(result.supuestos).toEqual(['s1']);
 
-    // La llamada lleva la key y el prompt con el tema
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain('api.anthropic.com');
     expect((init.headers as Record<string, string>)['x-api-key']).toBe('test-key');
     expect(init.body).toContain('Guerra Fría');
+    expect(init.body).toContain('10 páginas');
+    expect(init.body).toContain('2026-06-20');
+  });
+
+  it('devuelve preguntas cuando el modelo las hace y están permitidas', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', mockFetch('{"preguntas":["¿Tipo de trabajo?"]}'));
+    const result = await splitTopicIntoBlocks('hacer el trabajo');
+    expect(result.preguntas).toEqual(['¿Tipo de trabajo?']);
+  });
+
+  it('con allowQuestions=false, preguntas del modelo => AI_BAD_RESPONSE (sin bucles)', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    vi.stubGlobal('fetch', mockFetch('{"preguntas":["¿Tipo?"]}'));
+    await expect(
+      splitTopicIntoBlocks('hacer el trabajo', null, null, null, undefined, false),
+    ).rejects.toThrow('AI_BAD_RESPONSE');
+  });
+
+  it('con allowQuestions=false el prompt prohíbe preguntar', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    const fetchMock = mockFetch('{"bloques":[{"titulo":"B","descripcion":"","pomodoros_estimados":1}],"supuestos":[]}');
+    vi.stubGlobal('fetch', fetchMock);
+    await splitTopicIntoBlocks('tema', null, null, null, undefined, false);
+    expect(fetchMock.mock.calls[0][1].body).toContain('No puedes hacer preguntas');
   });
 
   it('lanza AI_REQUEST_FAILED si la API devuelve error', async () => {
