@@ -6,6 +6,27 @@ import { ProjectRole } from '../../data/dataTypes';
 import { io } from '../../index';
 import * as projectService from '../../services/project.service';
 
+// POST /api/projects/:uuid/invite-link — genera un token de invitación (7 días)
+export const createInviteLink = async (req: Request, res: Response) => {
+  try {
+    const projectUuid = req.params.uuid as string;
+    const { role } = req.body as { role: 'viewer' | 'editor' };
+    const requesterId = req.user!.id;
+
+    const token = await membersService.createInviteToken(projectUuid, role, requesterId);
+    res.status(201).json({ token });
+  } catch (error: any) {
+    if (error.message === 'PERMISSION_DENIED') {
+      return res.status(403).json({ message: 'No tienes permiso para invitar a este grupo.' });
+    }
+    if (error.message === 'PROJECT_NOT_FOUND') {
+      return res.status(404).json({ message: 'Grupo no encontrado.' });
+    }
+    console.error('Error creating invite link:', error);
+    res.status(500).json({ message: 'Error creating invite link' });
+  }
+};
+
 // Invita (añade) un miembro al proyecto por email. POST /:projectUuid/members
 export const inviteMember = async (req: Request, res: Response) => {
   try {

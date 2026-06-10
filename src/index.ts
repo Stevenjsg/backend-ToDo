@@ -12,6 +12,7 @@ import projectsRouter from './api/projects/projects.routes';
 import remindersRouter from './api/reminder/reminder.routes';
 import aiRouter from './api/ai/ai.routes';
 import eventsRouter from './api/events/events.routes';
+import invitesRouter from './api/invites/invites.routes';
 import jwt from 'jsonwebtoken';
 import { UserPayload } from './data/dataTypes';
 
@@ -39,6 +40,7 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/invites', invitesRouter);
 
 // --- Socket.IO Connection Logic ---
 io.on('connection', (socket) => {

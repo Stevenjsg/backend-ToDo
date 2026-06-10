@@ -11,6 +11,7 @@ import { protect } from "../../middleware/auth.middleware";
 import { body, param } from "express-validator";
 import { handleValidationErrors } from "../items/items.validator"; // Reuse error handler
 import membersRouter from "../members/members.routes";
+import { createInviteLink } from "../members/members.controller";
 import { getMyRole } from "./projects.controller";
 
 const router = Router();
@@ -47,6 +48,13 @@ router.delete(
   deleteProject
 );
 router.use("/:projectUuid/members", membersRouter);
+router.post(
+  "/:uuid/invite-link",
+  validateProjectUuid,
+  body("role").isIn(["viewer", "editor"]).withMessage("Rol inválido"),
+  handleValidationErrors,
+  createInviteLink
+);
 router.get(
   "/:uuid/progress",
   validateProjectUuid,
