@@ -1,5 +1,5 @@
 import { pool } from "../config/database";
-import { MemberProgress, ProjectRole } from "../data/dataTypes";
+import { MemberProgress, ProjectRole, ReportItemRow } from "../data/dataTypes";
 
 // Basic structure for Project (define fully in dataTypes.ts later)
 interface Project {
@@ -153,6 +153,86 @@ export const getProgress = async (
     ) ps ON ps.usuario_id = u.id
     WHERE mp.proyecto_id = $1
     ORDER BY u.nombre_completo NULLS LAST, u.email;
+  `;
+  const result = await pool.query(query, [projectId]);
+  return result.rows;
+};
+
+// --- Reporte compartible (ROADMAP F4 / SDD §18.1) ---
+
+export const getShareToken = async (
+  projectId: number
+): Promise<{ token: string | null; creado: string | null }> => {
+  const result = await pool.query(
+    `SELECT share_token, share_token_creado FROM proyectos WHERE id = $1`,
+    [projectId]
+  );
+  return {
+    token: result.rows[0]?.share_token ?? null,
+    creado: result.rows[0]?.share_token_creado ?? null,
+  };
+};
+
+export const setShareToken = async (
+  projectId: number,
+  token: string
+): Promise<void> => {
+  await pool.query(
+    `UPDATE proyectos SET share_token = $1, share_token_creado = NOW() WHERE id = $2`,
+    [token, projectId]
+  );
+};
+
+export const clearShareToken = async (projectId: number): Promise<void> => {
+  await pool.query(
+    `UPDATE proyectos SET share_token = NULL, share_token_creado = NULL WHERE id = $1`,
+    [projectId]
+  );
+};
+
+export const findByShareToken = async (
+  token: string
+): Promise<{
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  share_token_creado: string | null;
+} | null> => {
+  const result = await pool.query(
+    `SELECT id, nombre, descripcion, share_token_creado FROM proyectos WHERE share_token = $1`,
+    [token]
+  );
+  return result.rows[0] || null;
+};
+
+/**
+ * Items para el reporte público: temas y bloques con el NOMBRE del asignado
+ * ya resuelto y pomodoros reales por item. Datos crudos, sin scoring
+ * (SDD §18.7); no se exponen emails cuando hay nombre, ni ids de usuario.
+ */
+export const getReportItems = async (
+  projectId: number
+): Promise<ReportItemRow[]> => {
+  const query = `
+    SELECT
+      i.id,
+      i.parent_id,
+      i.titulo,
+      i.completada,
+      i.pomodoros_estimados,
+      i.fecha_vencimiento,
+      COALESCE(u.nombre_completo, u.email) AS asignado,
+      COALESCE(ps.pomodoros, 0)::int AS pomodoros_reales
+    FROM items i
+    LEFT JOIN usuarios u ON u.id = i.assignee_id
+    LEFT JOIN (
+      SELECT item_id, COUNT(*) AS pomodoros
+      FROM pomodoro_sesiones
+      WHERE tipo_sesion = 'trabajo'
+      GROUP BY item_id
+    ) ps ON ps.item_id = i.id
+    WHERE i.proyecto_id = $1 AND i.tipo = 'task'
+    ORDER BY i.parent_id NULLS FIRST, i.id;
   `;
   const result = await pool.query(query, [projectId]);
   return result.rows;

@@ -1,6 +1,11 @@
-# Backend API for To-Do List App (Node.js)
+# BTaskora — Backend API (Node.js)
 
-Este repositorio contiene el backend para una aplicación de lista de tareas, construido con Node.js, Express y PostgreSQL. Proporciona una API RESTful segura para la gestión de usuarios y tareas, utilizando autenticación basada en JWT.
+Backend de **BTaskora**: Express 5 + Socket.IO + PostgreSQL (Supabase), con
+división de trabajos por IA (API de Anthropic) y autenticación JWT.
+
+> 📘 **La documentación unificada para desarrolladores (setup, API completa,
+> modelo de datos, convenciones) vive en el repo del frontend:**
+> [`vue-ToDo/docs/DEVELOPERS.md`](https://github.com/Stevenjsg/vue-ToDo/blob/main/docs/DEVELOPERS.md)
 
 ---
 

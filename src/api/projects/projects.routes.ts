@@ -6,6 +6,9 @@ import {
   updateProject,
   deleteProject,
   getProgress,
+  getShareLink,
+  createShareLink,
+  revokeShareLink,
 } from "./projects.controller";
 import { protect } from "../../middleware/auth.middleware";
 import { body, param } from "express-validator";
@@ -66,6 +69,25 @@ router.get(
   validateProjectUuid,
   handleValidationErrors,
   getMyRole
+);
+// Reporte compartible (ROADMAP F4): gestión del link público
+router.get(
+  "/:uuid/share",
+  validateProjectUuid,
+  handleValidationErrors,
+  getShareLink
+);
+router.post(
+  "/:uuid/share",
+  validateProjectUuid,
+  handleValidationErrors,
+  createShareLink
+);
+router.delete(
+  "/:uuid/share",
+  validateProjectUuid,
+  handleValidationErrors,
+  revokeShareLink
 );
 
 export default router;

@@ -13,8 +13,10 @@ import remindersRouter from './api/reminder/reminder.routes';
 import aiRouter from './api/ai/ai.routes';
 import eventsRouter from './api/events/events.routes';
 import invitesRouter from './api/invites/invites.routes';
+import reportRouter from './api/report/report.routes';
 import jwt from 'jsonwebtoken';
 import { UserPayload } from './data/dataTypes';
+import * as membersRepository from './repositories/members.repository';
 
 // --- Basic Setup ---
 const app = express();
@@ -41,6 +43,7 @@ app.use('/api/reminders', remindersRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/invites', invitesRouter);
+app.use('/api/report', reportRouter); // público: reporte compartible (F4)
 
 // --- Socket.IO Connection Logic ---
 io.on('connection', (socket) => {
@@ -63,14 +66,27 @@ io.on('connection', (socket) => {
         socket.join(userRoom);
         console.log(`User ${socket.id} (ID: ${userId}) joined personal room: ${userRoom}`);
 
-        // Ahora puedes manejar 'join_project' aquí también si quieres
-        socket.on('join_project', (projectId) => {
+        // Unir a la sala del grupo SOLO si el usuario es miembro (C-1: evita que
+        // cualquier usuario autenticado espíe los eventos de un grupo ajeno
+        // enumerando ids). El projectId numérico ya viaja desde el cliente y la
+        // pertenencia se valida contra miembros_proyecto.
+        socket.on('join_project', async (projectId) => {
             const projectRoom = `project_${projectId}`;
-            console.log(`User ${socket.id} (ID: ${userId}) joined project room: ${projectRoom}`);
-            socket.join(projectRoom); 
-            // Podrías verificar aquí si el usuario realmente pertenece al proyecto
-            socket.emit('joined_message', `Welcome to project ${projectId}!`);
-            socket.to(projectRoom).emit('user_joined', `User ${socket.id} has joined the project.`);
+            try {
+                const numericId = Number(projectId);
+                if (!Number.isInteger(numericId)) return;
+                const role = await membersRepository.findUserRole(userId, numericId);
+                if (!role) {
+                    console.warn(`User ${userId} denied join to ${projectRoom} (not a member)`);
+                    return; // no es miembro → no se une, no recibe eventos
+                }
+                socket.join(projectRoom);
+                console.log(`User ${socket.id} (ID: ${userId}) joined project room: ${projectRoom}`);
+                socket.emit('joined_message', `Welcome to project ${projectId}!`);
+                socket.to(projectRoom).emit('user_joined', `User ${socket.id} has joined the project.`);
+            } catch (err) {
+                console.error('join_project authorization error:', err);
+            }
         });
         socket.on('leave_project', (projectId) => {
         const room = `project_${projectId}`;

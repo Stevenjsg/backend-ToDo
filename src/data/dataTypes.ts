@@ -57,6 +57,51 @@ export interface MemberProgress {
   minutos_trabajo: number;
 }
 
+// --- Reporte compartible (ROADMAP F4 / SDD §18.1) ---
+
+// Fila cruda de items para el reporte (interna, con ids para armar el árbol)
+export interface ReportItemRow {
+  id: number;
+  parent_id: number | null;
+  titulo: string;
+  completada: boolean;
+  pomodoros_estimados: number | null;
+  fecha_vencimiento: string | null;
+  asignado: string | null; // nombre ya resuelto; sin id ni email separados
+  pomodoros_reales: number;
+}
+
+// Bloque tal como sale en el reporte público (sin ids internos)
+export interface ReportBlock {
+  titulo: string;
+  completada: boolean;
+  asignado: string | null;
+  pomodoros_estimados: number | null;
+  pomodoros_reales: number;
+}
+
+export interface ReportTema extends ReportBlock {
+  fecha_vencimiento: string | null;
+  bloques: ReportBlock[];
+}
+
+// Respuesta de GET /api/report/:token — datos crudos, sin scoring ni juicio
+// IA (SDD §18.7). Minimización: nombres resueltos, sin emails ni uuids.
+export interface PublicReport {
+  grupo: string;
+  descripcion: string | null;
+  generado_en: string;
+  compartido_desde: string | null;
+  miembros: {
+    nombre: string;
+    total_asignadas: number;
+    completadas: number;
+    pomodoros: number;
+    minutos_trabajo: number;
+  }[];
+  temas: ReportTema[];
+}
+
 // Interface for User Profile (add new fields)
 export interface UserProfile {
   id: number;

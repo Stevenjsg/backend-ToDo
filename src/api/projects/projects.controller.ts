@@ -107,6 +107,63 @@ export const getProgress = async (req: Request, res: Response) => {
   }
 };
 
+// --- Reporte compartible (ROADMAP F4) ---
+
+const handleShareError = (error: any, res: Response): Response | void => {
+  if (error.message === "PROJECT_NOT_FOUND_OR_FORBIDDEN") {
+    return res
+      .status(404)
+      .json({ message: "Project not found or permission denied." });
+  }
+  if (error.message === "PERMISSION_DENIED") {
+    return res
+      .status(403)
+      .json({ message: "Solo owner o editor pueden gestionar el link del reporte." });
+  }
+};
+
+// GET /api/projects/:uuid/share — link actual ({ token: null } si no hay)
+export const getShareLink = async (req: Request, res: Response) => {
+  try {
+    const share = await projectService.getShareLink(
+      req.params.uuid as string,
+      req.user!.id
+    );
+    res.status(200).json(share);
+  } catch (error: any) {
+    if (handleShareError(error, res)) return;
+    console.error("Error fetching share link:", error);
+    res.status(500).json({ message: "Error fetching share link" });
+  }
+};
+
+// POST /api/projects/:uuid/share — crea (o devuelve) el link del reporte
+export const createShareLink = async (req: Request, res: Response) => {
+  try {
+    const share = await projectService.createShareLink(
+      req.params.uuid as string,
+      req.user!.id
+    );
+    res.status(201).json(share);
+  } catch (error: any) {
+    if (handleShareError(error, res)) return;
+    console.error("Error creating share link:", error);
+    res.status(500).json({ message: "Error creating share link" });
+  }
+};
+
+// DELETE /api/projects/:uuid/share — revoca el link (el reporte deja de abrir)
+export const revokeShareLink = async (req: Request, res: Response) => {
+  try {
+    await projectService.revokeShareLink(req.params.uuid as string, req.user!.id);
+    res.status(204).send();
+  } catch (error: any) {
+    if (handleShareError(error, res)) return;
+    console.error("Error revoking share link:", error);
+    res.status(500).json({ message: "Error revoking share link" });
+  }
+};
+
 export const getMyRole = async (req: Request, res: Response) => {
   try {
     const projectUuid = req.params.uuid;
