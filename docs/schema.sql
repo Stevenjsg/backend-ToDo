@@ -131,14 +131,16 @@ CREATE TABLE IF NOT EXISTS pomodoro_sesiones (
 CREATE INDEX IF NOT EXISTS idx_pomodoro_usuario_id ON pomodoro_sesiones(usuario_id);
 
 -- =============================================================================
--- (Opcional pero recomendado en Supabase) Habilitar RLS.
--- Como este backend se conecta con un usuario de BD directo (pg.Pool) y NO con
--- supabase-js, la autorización real la hace la app. Mantener RLS activo evita
--- que la API PostgREST auto-generada quede abierta. Define políticas solo si
--- vas a exponer dicha API.
+-- RLS — ACTIVO en producción (auditoría QA A-7, cerrado el 2026-06-11).
+-- Este backend se conecta con pg.Pool (no supabase-js): la autorización de
+-- negocio la hace la app. RLS + revocación de grants cierran la API PostgREST
+-- auto-generada (roles anon/authenticated sin acceso). Ver migraciones
+-- 006_harden_api_grants.sql (revokes) y 007_app_role_minimo.sql (rol de app
+-- de mínimo privilegio + policies app_all).
 -- =============================================================================
--- ALTER TABLE usuarios          ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE proyectos         ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE miembros_proyecto ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE items             ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE pomodoro_sesiones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE proyectos         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE miembros_proyecto ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pomodoro_sesiones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE eventos           ENABLE ROW LEVEL SECURITY;
