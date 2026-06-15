@@ -43,6 +43,8 @@ export interface AiBlock {
   titulo: string;
   descripcion: string;
   pomodoros_estimados: number;
+  // Guía de ejecución: lista ordenada de pasos concretos para hacer el bloque
+  pasos: string[];
 }
 
 // Fila de progreso del grupo por miembro

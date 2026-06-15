@@ -66,8 +66,10 @@ Cíñete a los datos proporcionados; si el tipo de entregable está indicado, lo
 
 ${hint}
 
+Cada bloque debe servir además como guía de ejecución: incluye "pasos", una lista ORDENADA de 3 a 6 pasos concretos y accionables que la persona pueda seguir uno a uno para completar el bloque (empieza cada paso con un verbo; sin numerarlos, el orden del array es el orden de ejecución).
+
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni markdown:
-- Caso normal: {"bloques": [{"titulo": "string corto y accionable", "descripcion": "qué hay que hacer y qué entregar, 1-3 frases", "pomodoros_estimados": <entero 1-8>}], "supuestos": ["decisión que tomaste por falta de información, máx 4; lista vacía si no hubo"]}
+- Caso normal: {"bloques": [{"titulo": "string corto y accionable", "descripcion": "qué hay que hacer y qué entregar, 1-3 frases", "pomodoros_estimados": <entero 1-8>, "pasos": ["primer paso", "segundo paso", "..."]}], "supuestos": ["decisión que tomaste por falta de información, máx 4; lista vacía si no hubo"]}
 ${questionRule}`;
 
   const response = await fetch(ANTHROPIC_API_URL, {
@@ -154,11 +156,19 @@ export const parseSplitResponse = (text: string): SplitResult => {
     const b = raw as Record<string, unknown>;
     if (typeof b.titulo !== "string" || !b.titulo.trim()) continue;
     const est = Number(b.pomodoros_estimados);
+    // Pasos: lista ordenada de ejecución (guía "paso a paso" del bloque)
+    const pasos = Array.isArray(b.pasos)
+      ? b.pasos
+          .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+          .slice(0, 8)
+          .map((p) => p.trim().slice(0, 300))
+      : [];
     blocks.push({
       titulo: b.titulo.trim().slice(0, 255),
       descripcion: typeof b.descripcion === "string" ? b.descripcion.trim() : "",
       pomodoros_estimados:
         Number.isInteger(est) && est >= 1 && est <= 20 ? est : 1,
+      pasos,
     });
   }
 

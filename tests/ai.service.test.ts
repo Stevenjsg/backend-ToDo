@@ -39,6 +39,43 @@ describe('parseSplitResponse', () => {
     expect(result.supuestos).toEqual([]);
   });
 
+  it('parsea los pasos ordenados de cada bloque (guía de ejecución)', () => {
+    const text = JSON.stringify({
+      bloques: [
+        {
+          titulo: 'Investigar',
+          descripcion: 'd',
+          pomodoros_estimados: 2,
+          pasos: ['Buscar 3 fuentes', 'Tomar notas', 'Hacer el esquema'],
+        },
+        { titulo: 'Sin pasos', descripcion: '', pomodoros_estimados: 1 },
+      ],
+      supuestos: [],
+    })
+    const result = parseSplitResponse(text);
+    expect(result.bloques![0].pasos).toEqual([
+      'Buscar 3 fuentes',
+      'Tomar notas',
+      'Hacer el esquema',
+    ]);
+    // Sin pasos en la respuesta → lista vacía, nunca undefined
+    expect(result.bloques![1].pasos).toEqual([]);
+  });
+
+  it('limita los pasos a 8 y descarta entradas vacías', () => {
+    const text = JSON.stringify({
+      bloques: [
+        {
+          titulo: 'A',
+          descripcion: '',
+          pomodoros_estimados: 1,
+          pasos: ['1', '', '2', '3', '4', '5', '6', '7', '8', '9', '  '],
+        },
+      ],
+    })
+    expect(parseSplitResponse(text).bloques![0].pasos).toHaveLength(8);
+  });
+
   it('acepta el formato legado (array de bloques a secas)', () => {
     const text = JSON.stringify([
       { titulo: 'Legacy', descripcion: '', pomodoros_estimados: 2 },
