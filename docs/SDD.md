@@ -123,9 +123,11 @@ Todas las rutas excepto `/api/auth/*` requieren cabecera
 | POST | `/api/auth/login` | Login → devuelve JWT (exp. 1h) |
 | GET | `/api/users/me` | Perfil del usuario autenticado |
 | PUT | `/api/users/me` | Actualizar `nombre_completo`, `bio` |
-| GET | `/api/items` | Listar items (filtros `tipo`, `proyectoId`) |
+| GET | `/api/items` | Listar items (filtros `tipo`, `proyectoId`); incluye padres y bloques |
+| GET | `/api/items/focus` | Tareas pendientes para el Pomodoro (personales + asignadas al usuario) |
 | POST | `/api/items` | Crear item |
-| PUT | `/api/items/:uuid` | Actualizar item |
+| POST | `/api/items/:uuid/subtasks` | Crear bloques (sub-tareas) en lote bajo un tema (owner/editor) |
+| PUT | `/api/items/:uuid` | Actualizar item. Campos: `titulo`, `descripcion`, `completada`, `fecha_vencimiento`, `prioridad`, `etiquetas`, `assignee_id` (reparto por persona; en la UI se asigna **por bloque/sub-tarea**), `pomodoros_estimados`, `tipo_entregable`, `tamano_entregable`, **`steps_completed`** (array de booleans, JSONB) |
 | DELETE | `/api/items/:uuid` | Eliminar item |
 | GET | `/api/reminders/upcoming` | Recordatorios con vencimiento futuro |
 | GET | `/api/reminders/due` | Recordatorios vencidos sin completar |
@@ -211,6 +213,12 @@ erDiagram
         prioridad_enum prioridad "baja|media|alta, nullable"
         text_array etiquetas
         text regla_recurrencia "nullable"
+        int parent_id FK "nullable, bloque hijo de un tema"
+        int assignee_id FK "nullable, persona asignada"
+        int pomodoros_estimados "nullable (F3)"
+        varchar tipo_entregable "nullable (F3)"
+        varchar tamano_entregable "nullable (F3)"
+        jsonb steps_completed "default [], avance de pasos del bloque (F4)"
     }
 
     pomodoro_sesiones {
@@ -282,6 +290,13 @@ register/login básico.
    `items(usuario_id)`, `items(proyecto_id)`, `miembros_proyecto(proyecto_id)`,
    `proyectos(owner_id)`, y `UNIQUE(proyecto_id, usuario_id)` en miembros
    (el código ya maneja el error `23505`, así que la constraint debe existir).
+5. **`items.steps_completed` (migración `009_steps_completed.sql`, aplicada el
+   2026-06-15).** Columna `JSONB NOT NULL DEFAULT '[]'` con el estado de los
+   checkboxes de pasos de un bloque (array de booleans alineado por índice con
+   los pasos extraídos de la descripción). Al ser JSONB, el controller la
+   serializa con `JSON.stringify` antes del `UPDATE` (el repositorio es genérico
+   y de lo contrario `pg` la enviaría como array de Postgres). Los grants son a
+   nivel de tabla (006/007), así que `btaskora_app` la cubre sin cambios extra.
 
 ### 7.2 Conexión (`src/config/database.ts`)
 

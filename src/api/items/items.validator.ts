@@ -49,6 +49,8 @@ export const validateUpdateItem = [
     body('pomodoros_estimados').optional({ nullable: true }).isInt({ min: 1 }),
     body('tipo_entregable').optional({ nullable: true }).isIn([...TIPOS_ENTREGABLE]),
     body('tamano_entregable').optional({ nullable: true }).isString().isLength({ max: 120 }),
+    body('steps_completed').optional().isArray().withMessage('steps_completed debe ser un array'),
+    body('steps_completed.*').optional().isBoolean().withMessage('Cada paso debe ser booleano'),
 ];
 
 // Middleware to handle validation errors

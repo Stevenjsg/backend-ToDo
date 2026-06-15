@@ -57,12 +57,18 @@ export const updateItem = async (req: Request, res: Response) => {
   try {
     const uuid = req.params.uuid;
     const userId = req.user!.id;
-    const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable } = req.body;
+    const { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable, steps_completed } = req.body;
 
     // Define el tipo explícito para mayor claridad
-    type UpdateDataType = Partial<Pick<Item, 'titulo' | 'descripcion' | 'completada' | 'fecha_vencimiento' | 'prioridad' | 'etiquetas' | 'regla_recurrencia' | 'assignee_id' | 'pomodoros_estimados' | 'tipo_entregable' | 'tamano_entregable'>>;
+    type UpdateDataType = Partial<Pick<Item, 'titulo' | 'descripcion' | 'completada' | 'fecha_vencimiento' | 'prioridad' | 'etiquetas' | 'regla_recurrencia' | 'assignee_id' | 'pomodoros_estimados' | 'tipo_entregable' | 'tamano_entregable'>> & { steps_completed?: string };
 
+    // steps_completed es JSONB: el repositorio arma el UPDATE genéricamente y
+    // pg encodearía un array JS como array de Postgres (incompatible con jsonb).
+    // Lo serializamos a texto; Postgres castea text→jsonb en el SET.
     const updateData: UpdateDataType = { titulo, descripcion, completada, fecha_vencimiento, prioridad, etiquetas, regla_recurrencia, assignee_id, pomodoros_estimados, tipo_entregable, tamano_entregable };
+    if (Array.isArray(steps_completed)) {
+      updateData.steps_completed = JSON.stringify(steps_completed);
+    }
 
     // Filtra las claves undefined usando la aserción de tipo
     (Object.keys(updateData) as Array<keyof UpdateDataType>).forEach(key => {
@@ -75,7 +81,9 @@ export const updateItem = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'No update data provided.' });
     }
 
-    const updatedItem = await itemsService.updateItem(uuid, updateData, userId);
+    // steps_completed viaja serializado (text→jsonb); el tipo de Item lo declara
+    // como boolean[], de ahí el cast en el límite con el servicio.
+    const updatedItem = await itemsService.updateItem(uuid, updateData as unknown as Partial<Item>, userId);
     res.status(200).json(updatedItem);
 
   } catch (error: any) {

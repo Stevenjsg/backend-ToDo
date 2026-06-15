@@ -25,6 +25,7 @@ export interface Item {
   pomodoros_estimados: number | null; // estimación en pomodoros del bloque
   tipo_entregable: string | null; // ensayo | investigacion | exposicion | ... (F3)
   tamano_entregable: string | null; // "10 páginas", "15 min"... (F3)
+  steps_completed?: boolean[]; // estado de los pasos del bloque, alineado por índice (F4)
 }
 
 export const TIPOS_ENTREGABLE = [
