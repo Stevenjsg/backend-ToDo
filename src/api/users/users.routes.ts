@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMe, updateMe } from "./users.controller";
+import { getMe, getMySummary, updateMe } from "./users.controller";
 import { protect } from "../../middleware/auth.middleware"; // Protegemos las rutas
 
 const router = Router();
@@ -8,6 +8,7 @@ const router = Router();
 router.use(protect);
 
 router.get("/me", getMe);
+router.get("/me/summary", getMySummary);
 router.put("/me", updateMe);
 
 export default router;

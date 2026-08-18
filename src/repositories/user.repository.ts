@@ -71,3 +71,90 @@ export const update = async (id: number, data: { nombre_completo?: string; bio?:
   const result = await pool.query(query, [nombre_completo, bio, id]);
   return result.rows[0];
 };
+// --- Resumen del perfil (Design System v3: el perfil cuenta algo) ---------
+
+/**
+ * Totales de trabajo del usuario: pomodoros de trabajo, minutos cronometrados
+ * y bloques completados (asignados a él en grupos, o personales suyos).
+ */
+export const getWorkTotals = async (userId: number) => {
+  const query = `
+    SELECT
+      (SELECT COUNT(*)::int
+         FROM pomodoro_sesiones
+        WHERE usuario_id = $1 AND tipo_sesion = 'trabajo') AS pomodoros,
+      (SELECT COALESCE(SUM(duracion_minutos), 0)::int
+         FROM pomodoro_sesiones
+        WHERE usuario_id = $1 AND tipo_sesion = 'trabajo') AS minutos,
+      (SELECT COUNT(*)::int
+         FROM items
+        WHERE tipo = 'task' AND completada
+          AND (assignee_id = $1 OR (proyecto_id IS NULL AND usuario_id = $1))
+      ) AS bloques_hechos;
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows[0];
+};
+
+/**
+ * Días (fecha, sin hora) con al menos una sesión de trabajo en los últimos
+ * 90 días. Sirve para calcular la racha en el servicio.
+ */
+export const getFocusDays = async (userId: number): Promise<string[]> => {
+  const query = `
+    SELECT DISTINCT to_char(fecha_inicio::date, 'YYYY-MM-DD') AS dia
+    FROM pomodoro_sesiones
+    WHERE usuario_id = $1
+      AND tipo_sesion = 'trabajo'
+      AND fecha_inicio >= NOW() - INTERVAL '90 days'
+    ORDER BY dia;
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows.map((r) => r.dia);
+};
+
+/**
+ * Pomodoros de trabajo por día de los últimos 14 días (solo días con datos;
+ * el servicio rellena los huecos a cero).
+ */
+export const getDailyPomodoros = async (userId: number) => {
+  const query = `
+    SELECT to_char(fecha_inicio::date, 'YYYY-MM-DD') AS dia, COUNT(*)::int AS pomodoros
+    FROM pomodoro_sesiones
+    WHERE usuario_id = $1
+      AND tipo_sesion = 'trabajo'
+      AND fecha_inicio >= (CURRENT_DATE - INTERVAL '13 days')
+    GROUP BY dia
+    ORDER BY dia;
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows as { dia: string; pomodoros: number }[];
+};
+
+/**
+ * Grupos del usuario con su rol y el avance en bloques (sub-tareas).
+ */
+export const getGroupsSummary = async (userId: number) => {
+  const query = `
+    SELECT
+      p.uuid,
+      p.nombre,
+      mp.rol,
+      COALESCE(b.total, 0)::int  AS bloques_total,
+      COALESCE(b.hechos, 0)::int AS bloques_hechos
+    FROM miembros_proyecto mp
+    JOIN proyectos p ON p.id = mp.proyecto_id
+    LEFT JOIN (
+      SELECT proyecto_id,
+             COUNT(*) AS total,
+             COUNT(*) FILTER (WHERE completada) AS hechos
+      FROM items
+      WHERE tipo = 'task' AND parent_id IS NOT NULL
+      GROUP BY proyecto_id
+    ) b ON b.proyecto_id = p.id
+    WHERE mp.usuario_id = $1
+    ORDER BY p.fecha_creacion DESC;
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows;
+};

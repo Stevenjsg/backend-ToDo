@@ -11,6 +11,16 @@ export const getMe = async (req: Request, res: Response) => {
   }
 };
 
+export const getMySummary = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const summary = await userService.getUserSummary(userId);
+    res.status(200).json(summary);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener el resumen del perfil.' });
+  }
+};
+
 export const updateMe = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
